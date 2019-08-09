@@ -10,9 +10,11 @@ import (
 
 // Handler expose ping routes.
 type Handler struct {
-	EntryPoint  string   `description:"Ping entryPoint" export:"true"`
-	Middlewares []string `description:"Middleware list" export:"true"`
 	terminating bool
+}
+
+// SetDefaults sets the default values.
+func (h *Handler) SetDefaults() {
 }
 
 // WithContext causes the ping endpoint to serve non 200 responses.

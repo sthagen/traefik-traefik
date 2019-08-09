@@ -1,124 +1,281 @@
 # Traefik & Rancher
 
-A Story of Labels, Services & Container
+A Story of Labels, Services & Containers
 {: .subtitle }
 
 ![Rancher](../assets/img/providers/rancher.png)
 
 Attach labels to your services and let Traefik do the rest!
 
+!!! important
+    This provider is specific to Rancher 1.x.
+    Rancher 2.x requires Kubernetes and does not have a metadata endpoint of its own for Traefik to query.
+    As such, Rancher 2.x users should utilize the [Kubernetes provider](./kubernetes-crd.md) directly.
+
 ## Configuration Examples
 
-??? example "Configuring Docker & Deploying / Exposing Services"
+??? example "Configuring Rancher & Deploying / Exposing Services"
 
     Enabling the rancher provider
 
-    ```toml
-    [provider.rancher]
+    ```toml tab="File (TOML)"
+    [providers.rancher]
+    ```
+    
+    ```yaml tab="File (YAML)"
+    providers:
+      rancher: {}
+    ```
+    
+    ```bash tab="CLI"
+    --providers.rancher=true
     ```
 
     Attaching labels to services
 
     ```yaml
     labels:
-      - traefik.http.services.my-service.rule=Host(my-domain)
+      - traefik.http.services.my-service.rule=Host(`my-domain`)
     ```
 
 ## Provider Configuration Options
 
-!!! tip "Browse the Reference"
+??? tip "Browse the Reference"
     If you're in a hurry, maybe you'd rather go through the configuration reference:
     
-    ```toml
-    ################################################################
-    # Rancher Provider
-    ################################################################
+    ```toml tab="File (TOML)"
+    --8<-- "content/providers/rancher.toml"
+    ```
     
-    # Enable Docker Provider.
-    [rancher]
+    ```yaml tab="File (YAML)"
+    --8<-- "content/providers/rancher.yml"
+    ```
     
-    # The default host rule for all services.
-    #
-    # Optionnal
-    #
-    DefaultRule = "unix:///var/run/docker.sock"
-    
-    # Expose Rancher services by default in Traefik.
-    #
-    # Optional
-    #
-    ExposedByDefault = "docker.localhost"
-    
-    # Enable watch docker changes.
-    #
-    # Optional
-    #
-    watch = true
-    
-    # Filter services with unhealthy states and inactive states.
-    #
-    # Optional
-    #
-    EnableServiceHealthFilter = true
-    
-    # Defines the polling interval (in seconds).
-    #
-    # Optional
-    #
-    RefreshSeconds = true
-    
-    # Poll the Rancher metadata service for changes every `rancher.refreshSeconds`, which is less accurate
-    #
-    # Optional
-    #
-    IntervalPoll = false
-    
-    # Prefix used for accessing the Rancher metadata service
-    #
-    # Optional
-    #
-    Prefix = 15
+    ```bash tab="CLI"
+    --8<-- "content/providers/rancher.txt"
     ```
 
-### `ExposedByDefault`
+List of all available labels for the [dynamic](../reference/dynamic-configuration/rancher.md) configuration references.
+
+### `exposedByDefault`
 
 _Optional, Default=true_
+
+```toml tab="File (TOML)"
+[providers.rancher]
+  exposedByDefault = false
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  rancher:
+    exposedByDefault: false
+    # ...
+```
+
+```bash tab="CLI"
+--providers.rancher.exposedByDefault=false
+# ...
+```
 
 Expose Rancher services by default in Traefik.
 If set to false, services that don't have a `traefik.enable=true` label will be ignored from the resulting routing configuration.
 
-### `DefaultRule`
+See also [Restrict the Scope of Service Discovery](./overview.md#restrict-the-scope-of-service-discovery).
 
-_Optional_
+### `defaultRule`
+
+_Optional, Default=```Host(`{{ normalize .Name }}`)```_
+
+```toml tab="File (TOML)"
+[providers.rancher]
+  defaultRule = "Host(`{{ .Name }}.{{ index .Labels \"customLabel\"}}`)"
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  rancher:
+    defaultRule: "Host(`{{ .Name }}.{{ index .Labels \"customLabel\"}}`)"
+    # ...
+```
+
+```bash tab="CLI"
+--providers.rancher.defaultRule="Host(`{{ .Name }}.{{ index .Labels \"customLabel\"}}`)"
+# ...
+```
 
 The default host rule for all services.
 
+For a given container if no routing rule was defined by a label, it is defined by this defaultRule instead.
+It must be a valid [Go template](https://golang.org/pkg/text/template/),
+augmented with the [sprig template functions](http://masterminds.github.io/sprig/).
+The service name can be accessed as the `Name` identifier,
+and the template has access to all the labels defined on this container.
+
 This option can be overridden on a container basis with the `traefik.http.routers.Router1.rule` label.
 
-### `EnableServiceHealthFilter`
+### `enableServiceHealthFilter`
 
 _Optional, Default=true_
 
+```toml tab="File (TOML)"
+[providers.rancher]
+  enableServiceHealthFilter = false
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  rancher:
+    enableServiceHealthFilter: false
+    # ...
+```
+
+```bash tab="CLI"
+--providers.rancher.enableServiceHealthFilter=false
+# ...
+```
+
 Filter services with unhealthy states and inactive states.
 
-### `RefreshSeconds`
+### `refreshSeconds`
 
 _Optional, Default=15_
 
+```toml tab="File (TOML)"
+[providers.rancher]
+  refreshSeconds = 30
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  rancher:
+    refreshSeconds: 30
+    # ...
+```
+
+```bash tab="CLI"
+--providers.rancher.refreshSeconds=30
+# ...
+```
+
 Defines the polling interval (in seconds).
 
-### `IntervalPoll`
+### `intervalPoll`
 
 _Optional, Default=false_
+
+```toml tab="File (TOML)"
+[providers.rancher]
+  intervalPoll = true
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  rancher:
+    intervalPoll: true
+    # ...
+```
+
+```bash tab="CLI"
+--providers.rancher.intervalPoll=true
+# ...
+```
 
 Poll the Rancher metadata service for changes every `rancher.refreshSeconds`,
 which is less accurate than the default long polling technique which will provide near instantaneous updates to Traefik.
 
-### `Prefix`
+### `prefix`
 
 _Optional, Default=/latest_
 
+```toml tab="File (TOML)"
+[providers.rancher]
+  prefix = "/test"
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  rancher:
+    prefix: "/test"
+    # ...
+```
+
+```bash tab="CLI"
+--providers.rancher.prefix="/test"
+# ...
+```
+
 Prefix used for accessing the Rancher metadata service
+
+### `constraints`
+
+_Optional, Default=""_
+
+```toml tab="File (TOML)"
+[providers.rancher]
+  constraints = "Label(`a.label.name`, `foo`)"
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  rancher:
+    constraints: "Label(`a.label.name`, `foo`)"
+    # ...
+```
+
+```bash tab="CLI"
+--providers.rancher.constraints="Label(`a.label.name`, `foo`)"
+# ...
+```
+
+Constraints is an expression that Traefik matches against the container's labels to determine whether to create any route for that container.
+That is to say, if none of the container's labels match the expression, no route for the container is created.
+If the expression is empty, all detected containers are included.
+
+The expression syntax is based on the `Label("key", "value")`, and `LabelRegexp("key", "value")` functions, as well as the usual boolean logic, as shown in examples below.
+
+??? example "Constraints Expression Examples"
+
+    ```toml
+    # Includes only containers having a label with key `a.label.name` and value `foo`
+    constraints = "Label(`a.label.name`, `foo`)"
+    ```
+    
+    ```toml
+    # Excludes containers having any label with key `a.label.name` and value `foo`
+    constraints = "!Label(`a.label.name`, `value`)"
+    ```
+    
+    ```toml
+    # With logical AND.
+    constraints = "Label(`a.label.name`, `valueA`) && Label(`another.label.name`, `valueB`)"
+    ```
+    
+    ```toml
+    # With logical OR.
+    constraints = "Label(`a.label.name`, `valueA`) || Label(`another.label.name`, `valueB`)"
+    ```
+    
+    ```toml
+    # With logical AND and OR, with precedence set by parentheses.
+    constraints = "Label(`a.label.name`, `valueA`) && (Label(`another.label.name`, `valueB`) || Label(`yet.another.label.name`, `valueC`))"
+    ```
+    
+    ```toml
+    # Includes only containers having a label with key `a.label.name` and a value matching the `a.+` regular expression.
+    constraints = "LabelRegexp(`a.label.name`, `a.+`)"
+    ```
+
+See also [Restrict the Scope of Service Discovery](./overview.md#restrict-the-scope-of-service-discovery).
+
+## Routing Configuration Options
 
 ### General
 
@@ -136,28 +293,30 @@ Every [Router](../routing/routers/index.md) parameter can be updated this way.
 ### Services
 
 To update the configuration of the Service automatically attached to the container, add labels starting with `traefik.http.services.{name-of-your-choice}.`,
-followed by the option you want to change. For example, to change the load balancer method,
-you'd add the label `traefik.http.services.{name-of-your-choice}.loadbalancer.method=drr`.
+followed by the option you want to change. For example, to change the passhostheader behavior,
+you'd add the label `traefik.http.services.{name-of-your-choice}.loadbalancer.passhostheader=false`.
 
 Every [Service](../routing/services/index.md) parameter can be updated this way.
 
 ### Middleware
 
 You can declare pieces of middleware using labels starting with `traefik.http.middlewares.{name-of-your-choice}.`, followed by the middleware type/options.
-For example, to declare a middleware [`schemeredirect`](../middlewares/redirectscheme.md) named `my-redirect`, you'd write `traefik.http.middlewares.my-redirect.schemeredirect.scheme: https`.
+For example, to declare a middleware [`redirectscheme`](../middlewares/redirectscheme.md) named `my-redirect`, you'd write `traefik.http.middlewares.my-redirect.redirectscheme.scheme: https`.
 
 ??? example "Declaring and Referencing a Middleware"
     
     ```yaml
     # ...
     labels:
-     - traefik.http.middlewares.my-redirect.schemeredirect.scheme=https
-     - traefik.http.routers.middlewares=my-redirect
+     - traefik.http.middlewares.my-redirect.redirectscheme.scheme=https
+     - traefik.http.routers.my-container.middlewares=my-redirect
     ```
 
 !!! warning "Conflicts in Declaration"
 
     If you declare multiple middleware with the same name but with different parameters, the middleware fails to be declared.
+
+More information about available middlewares in the dedicated [middlewares section](../middlewares/overview.md).
 
 ### Specific Options
 
@@ -166,10 +325,6 @@ For example, to declare a middleware [`schemeredirect`](../middlewares/redirects
 You can tell Traefik to consider (or not) the container by setting `traefik.enable` to true or false.
 
 This option overrides the value of `exposedByDefault`.
-
-#### `traefik.tags`
-
-Sets the tags for [constraints filtering](./overview.md#constraints-configuration).
 
 #### Port Lookup
 

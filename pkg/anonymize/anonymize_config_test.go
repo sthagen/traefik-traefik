@@ -5,10 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containous/flaeg/parse"
 	"github.com/containous/traefik/pkg/config/static"
 	"github.com/containous/traefik/pkg/ping"
-	"github.com/containous/traefik/pkg/provider"
 	"github.com/containous/traefik/pkg/provider/acme"
 	acmeprovider "github.com/containous/traefik/pkg/provider/acme"
 	"github.com/containous/traefik/pkg/provider/docker"
@@ -17,6 +15,7 @@ import (
 	"github.com/containous/traefik/pkg/provider/kubernetes/ingress"
 	traefiktls "github.com/containous/traefik/pkg/tls"
 	"github.com/containous/traefik/pkg/tracing/datadog"
+	"github.com/containous/traefik/pkg/tracing/haystack"
 	"github.com/containous/traefik/pkg/tracing/instana"
 	"github.com/containous/traefik/pkg/tracing/jaeger"
 	"github.com/containous/traefik/pkg/tracing/zipkin"
@@ -29,7 +28,6 @@ func TestDo_globalConfiguration(t *testing.T) {
 
 	sendAnonymousUsage := true
 	config.Global = &static.Global{
-		Debug:              true,
 		CheckNewVersion:    true,
 		SendAnonymousUsage: &sendAnonymousUsage,
 	}
@@ -38,18 +36,18 @@ func TestDo_globalConfiguration(t *testing.T) {
 		FilePath: "AccessLog FilePath",
 		Format:   "AccessLog Format",
 		Filters: &types.AccessLogFilters{
-			StatusCodes:   types.StatusCodes{"200", "500"},
+			StatusCodes:   []string{"200", "500"},
 			RetryAttempts: true,
 			MinDuration:   10,
 		},
 		Fields: &types.AccessLogFields{
 			DefaultMode: "drop",
-			Names: types.FieldNames{
+			Names: map[string]string{
 				"RequestHost": "keep",
 			},
 			Headers: &types.FieldHeaders{
 				DefaultMode: "drop",
-				Names: types.FieldHeaderNames{
+				Names: map[string]string{
 					"Referer": "keep",
 				},
 			},
@@ -68,9 +66,9 @@ func TestDo_globalConfiguration(t *testing.T) {
 			Address: "foo Address",
 			Transport: &static.EntryPointsTransport{
 				RespondingTimeouts: &static.RespondingTimeouts{
-					ReadTimeout:  parse.Duration(111 * time.Second),
-					WriteTimeout: parse.Duration(111 * time.Second),
-					IdleTimeout:  parse.Duration(111 * time.Second),
+					ReadTimeout:  types.Duration(111 * time.Second),
+					WriteTimeout: types.Duration(111 * time.Second),
+					IdleTimeout:  types.Duration(111 * time.Second),
 				},
 			},
 			ProxyProtocol: &static.ProxyProtocol{
@@ -81,9 +79,9 @@ func TestDo_globalConfiguration(t *testing.T) {
 			Address: "fii Address",
 			Transport: &static.EntryPointsTransport{
 				RespondingTimeouts: &static.RespondingTimeouts{
-					ReadTimeout:  parse.Duration(111 * time.Second),
-					WriteTimeout: parse.Duration(111 * time.Second),
-					IdleTimeout:  parse.Duration(111 * time.Second),
+					ReadTimeout:  types.Duration(111 * time.Second),
+					WriteTimeout: types.Duration(111 * time.Second),
+					IdleTimeout:  types.Duration(111 * time.Second),
 				},
 			},
 			ProxyProtocol: &static.ProxyProtocol{
@@ -91,46 +89,37 @@ func TestDo_globalConfiguration(t *testing.T) {
 			},
 		},
 	}
-	config.ACME = &acme.Configuration{
-		Email:        "acme Email",
-		ACMELogging:  true,
-		CAServer:     "CAServer",
-		Storage:      "Storage",
-		EntryPoint:   "EntryPoint",
-		KeyType:      "MyKeyType",
-		OnHostRule:   true,
-		DNSChallenge: &acmeprovider.DNSChallenge{Provider: "DNSProvider"},
-		HTTPChallenge: &acmeprovider.HTTPChallenge{
-			EntryPoint: "MyEntryPoint",
-		},
-		TLSChallenge: &acmeprovider.TLSChallenge{},
-		Domains: []types.Domain{
-			{
-				Main: "Domains Main",
-				SANs: []string{"Domains acme SANs 1", "Domains acme SANs 2", "Domains acme SANs 3"},
+	config.CertificatesResolvers = map[string]static.CertificateResolver{
+		"default": {
+			ACME: &acme.Configuration{
+				Email:        "acme Email",
+				CAServer:     "CAServer",
+				Storage:      "Storage",
+				KeyType:      "MyKeyType",
+				DNSChallenge: &acmeprovider.DNSChallenge{Provider: "DNSProvider"},
+				HTTPChallenge: &acmeprovider.HTTPChallenge{
+					EntryPoint: "MyEntryPoint",
+				},
+				TLSChallenge: &acmeprovider.TLSChallenge{},
 			},
 		},
 	}
 	config.Providers = &static.Providers{
-		ProvidersThrottleDuration: parse.Duration(111 * time.Second),
+		ProvidersThrottleDuration: types.Duration(111 * time.Second),
 	}
 
 	config.ServersTransport = &static.ServersTransport{
 		InsecureSkipVerify:  true,
-		RootCAs:             traefiktls.FilesOrContents{"RootCAs 1", "RootCAs 2", "RootCAs 3"},
+		RootCAs:             []traefiktls.FileOrContent{"RootCAs 1", "RootCAs 2", "RootCAs 3"},
 		MaxIdleConnsPerHost: 111,
 		ForwardingTimeouts: &static.ForwardingTimeouts{
-			DialTimeout:           parse.Duration(111 * time.Second),
-			ResponseHeaderTimeout: parse.Duration(111 * time.Second),
+			DialTimeout:           types.Duration(111 * time.Second),
+			ResponseHeaderTimeout: types.Duration(111 * time.Second),
 		},
 	}
 
 	config.API = &static.API{
-		EntryPoint: "traefik",
-		Dashboard:  true,
-		Statistics: &types.Statistics{
-			RecentErrors: 111,
-		},
+		Dashboard: true,
 		DashboardAssets: &assetfs.AssetFS{
 			Asset: func(path string) ([]byte, error) {
 				return nil, nil
@@ -143,7 +132,6 @@ func TestDo_globalConfiguration(t *testing.T) {
 			},
 			Prefix: "fii",
 		},
-		Middlewares: []string{"first", "second"},
 	}
 
 	config.Providers.File = &file.Provider{
@@ -151,24 +139,10 @@ func TestDo_globalConfiguration(t *testing.T) {
 		Watch:                     true,
 		Filename:                  "file Filename",
 		DebugLogGeneratedTemplate: true,
-		TraefikFile:               "",
 	}
 
 	config.Providers.Docker = &docker.Provider{
-		Constrainer: provider.Constrainer{
-			Constraints: types.Constraints{
-				{
-					Key:       "file Constraints Key 1",
-					Regex:     "file Constraints Regex 2",
-					MustMatch: true,
-				},
-				{
-					Key:       "file Constraints Key 1",
-					Regex:     "file Constraints Regex 2",
-					MustMatch: true,
-				},
-			},
-		},
+		Constraints: `Label("foo", "bar")`,
 		Watch:       true,
 		Endpoint:    "MyEndPoint",
 		DefaultRule: "PathPrefix(`/`)",
@@ -186,7 +160,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 		SwarmModeRefreshSeconds: 42,
 	}
 
-	config.Providers.Kubernetes = &ingress.Provider{
+	config.Providers.KubernetesIngress = &ingress.Provider{
 		Endpoint:               "MyEndpoint",
 		Token:                  "MyToken",
 		CertAuthFilePath:       "MyCertAuthPath",
@@ -210,22 +184,20 @@ func TestDo_globalConfiguration(t *testing.T) {
 
 	config.Metrics = &types.Metrics{
 		Prometheus: &types.Prometheus{
-			Buckets:     types.Buckets{0.1, 0.3, 1.2, 5},
-			EntryPoint:  "MyEntryPoint",
-			Middlewares: []string{"m1", "m2"},
+			Buckets: []float64{0.1, 0.3, 1.2, 5},
 		},
-		Datadog: &types.Datadog{
+		DataDog: &types.DataDog{
 			Address:      "localhost:8181",
-			PushInterval: "12",
+			PushInterval: 12,
 		},
 		StatsD: &types.Statsd{
 			Address:      "localhost:8182",
-			PushInterval: "42",
+			PushInterval: 42,
 		},
 		InfluxDB: &types.InfluxDB{
 			Address:         "localhost:8183",
 			Protocol:        "http",
-			PushInterval:    "22",
+			PushInterval:    22,
 			Database:        "myDB",
 			RetentionPolicy: "12",
 			Username:        "a",
@@ -233,13 +205,9 @@ func TestDo_globalConfiguration(t *testing.T) {
 		},
 	}
 
-	config.Ping = &ping.Handler{
-		EntryPoint:  "MyEntryPoint",
-		Middlewares: []string{"m1", "m2", "m3"},
-	}
+	config.Ping = &ping.Handler{}
 
 	config.Tracing = &static.Tracing{
-		Backend:       "myBackend",
 		ServiceName:   "myServiceName",
 		SpanNameLimit: 3,
 		Jaeger: &jaeger.Config{
@@ -268,6 +236,15 @@ func TestDo_globalConfiguration(t *testing.T) {
 			LocalAgentHost: "fff",
 			LocalAgentPort: 32,
 			LogLevel:       "ggg",
+		},
+		Haystack: &haystack.Config{
+			LocalAgentHost:          "fff",
+			LocalAgentPort:          32,
+			GlobalTag:               "eee",
+			TraceIDHeaderName:       "fff",
+			ParentIDHeaderName:      "ggg",
+			SpanIDHeaderName:        "hhh",
+			BaggagePrefixHeaderName: "iii",
 		},
 	}
 

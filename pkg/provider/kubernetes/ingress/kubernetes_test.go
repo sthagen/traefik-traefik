@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/containous/traefik/pkg/provider"
 	"github.com/containous/traefik/pkg/tls"
 	"github.com/stretchr/testify/assert"
@@ -23,44 +23,41 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 	testCases := []struct {
 		desc         string
 		ingressClass string
-		expected     *config.Configuration
+		expected     *dynamic.Configuration
 	}{
 		{
 			desc: "Empty ingresses",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Routers:     map[string]*config.Router{},
-					Middlewares: map[string]*config.Middleware{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:     map[string]*dynamic.Router{},
+					Middlewares: map[string]*dynamic.Middleware{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
 		{
 			desc: "Ingress with a basic rule on one path",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"/bar": {
 							Rule:    "PathPrefix(`/bar`)",
 							Service: "testing/service1/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 									{
-										URL:    "http://10.21.0.1:8080",
-										Weight: 1,
+										URL: "http://10.21.0.1:8080",
 									},
 								},
 							},
@@ -71,11 +68,11 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with two different rules with one path",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"/bar": {
 							Rule:    "PathPrefix(`/bar`)",
 							Service: "testing/service1/80",
@@ -85,19 +82,16 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 							Service: "testing/service1/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 									{
-										URL:    "http://10.21.0.1:8080",
-										Weight: 1,
+										URL: "http://10.21.0.1:8080",
 									},
 								},
 							},
@@ -108,11 +102,11 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress one rule with two paths",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"/bar": {
 							Rule:    "PathPrefix(`/bar`)",
 							Service: "testing/service1/80",
@@ -122,19 +116,16 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 							Service: "testing/service1/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 									{
-										URL:    "http://10.21.0.1:8080",
-										Weight: 1,
+										URL: "http://10.21.0.1:8080",
 									},
 								},
 							},
@@ -145,29 +136,26 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress one rule with one path and one host",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-tchouk/bar": {
 							Rule:    "Host(`traefik.tchouk`) && PathPrefix(`/bar`)",
 							Service: "testing/service1/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 									{
-										URL:    "http://10.21.0.1:8080",
-										Weight: 1,
+										URL: "http://10.21.0.1:8080",
 									},
 								},
 							},
@@ -177,25 +165,23 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 			},
 		}, {
 			desc: "Ingress with one host without path",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"example-com": {
 							Rule:    "Host(`example.com`)",
 							Service: "testing/example-com/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/example-com/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.11.0.1:80",
-										Weight: 1,
+										URL: "http://10.11.0.1:80",
 									},
 								},
 							},
@@ -206,11 +192,11 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress one rule with one host and two paths",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-tchouk/bar": {
 							Rule:    "Host(`traefik.tchouk`) && PathPrefix(`/bar`)",
 							Service: "testing/service1/80",
@@ -220,19 +206,16 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 							Service: "testing/service1/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 									{
-										URL:    "http://10.21.0.1:8080",
-										Weight: 1,
+										URL: "http://10.21.0.1:8080",
 									},
 								},
 							},
@@ -243,11 +226,11 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress Two rules with one host and one path",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-tchouk/bar": {
 							Rule:    "Host(`traefik.tchouk`) && PathPrefix(`/bar`)",
 							Service: "testing/service1/80",
@@ -257,19 +240,16 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 							Service: "testing/service1/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 									{
-										URL:    "http://10.21.0.1:8080",
-										Weight: 1,
+										URL: "http://10.21.0.1:8080",
 									},
 								},
 							},
@@ -280,11 +260,11 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with a bad path syntax",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"/bar": {
 							Rule:    "PathPrefix(`/bar`)",
 							Service: "testing/service1/80",
@@ -294,19 +274,16 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 							Service: "testing/service1/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 									{
-										URL:    "http://10.21.0.1:8080",
-										Weight: 1,
+										URL: "http://10.21.0.1:8080",
 									},
 								},
 							},
@@ -317,40 +294,37 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with only a bad path syntax",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers:     map[string]*config.Router{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
 		{
 			desc: "Ingress with a bad host syntax",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-courgette/carotte": {
 							Rule:    "Host(`traefik.courgette`) && PathPrefix(`/carotte`)",
 							Service: "testing/service1/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 									{
-										URL:    "http://10.21.0.1:8080",
-										Weight: 1,
+										URL: "http://10.21.0.1:8080",
 									},
 								},
 							},
@@ -361,22 +335,22 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with only a bad host syntax",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers:     map[string]*config.Router{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
 		{
 			desc: "Ingress with two services",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-tchouk/bar": {
 							Rule:    "Host(`traefik.tchouk`) && PathPrefix(`/bar`)",
 							Service: "testing/service1/80",
@@ -386,35 +360,29 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 							Service: "testing/service2/8082",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 									{
-										URL:    "http://10.21.0.1:8080",
-										Weight: 1,
+										URL: "http://10.21.0.1:8080",
 									},
 								},
 							},
 						},
 						"testing/service2/8082": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.2:8080",
-										Weight: 1,
+										URL: "http://10.10.0.2:8080",
 									},
 									{
-										URL:    "http://10.21.0.2:8080",
-										Weight: 1,
+										URL: "http://10.21.0.2:8080",
 									},
 								},
 							},
@@ -425,52 +393,49 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with one service without endpoints subset",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers:     map[string]*config.Router{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
 		{
 			desc: "Ingress with one service without endpoint",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers:     map[string]*config.Router{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
 		{
 			desc: "Single Service Ingress (without any rules)",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"/": {
 							Rule:     "PathPrefix(`/`)",
 							Service:  "default-backend",
 							Priority: math.MinInt32,
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"default-backend": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 									{
-										URL:    "http://10.21.0.1:8080",
-										Weight: 1,
+										URL: "http://10.21.0.1:8080",
 									},
 								},
 							},
@@ -481,29 +446,26 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with port value in backend and no pod replica",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-tchouk/bar": {
 							Rule:    "Host(`traefik.tchouk`) && PathPrefix(`/bar`)",
 							Service: "testing/service1/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8089",
-										Weight: 1,
+										URL: "http://10.10.0.1:8089",
 									},
 									{
-										URL:    "http://10.21.0.1:8089",
-										Weight: 1,
+										URL: "http://10.21.0.1:8089",
 									},
 								},
 							},
@@ -514,29 +476,26 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with port name in backend and no pod replica",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-tchouk/bar": {
 							Rule:    "Host(`traefik.tchouk`) && PathPrefix(`/bar`)",
 							Service: "testing/service1/tchouk",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/tchouk": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8089",
-										Weight: 1,
+										URL: "http://10.10.0.1:8089",
 									},
 									{
-										URL:    "http://10.21.0.1:8089",
-										Weight: 1,
+										URL: "http://10.21.0.1:8089",
 									},
 								},
 							},
@@ -547,29 +506,26 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with with port name in backend and 2 pod replica",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-tchouk/bar": {
 							Rule:    "Host(`traefik.tchouk`) && PathPrefix(`/bar`)",
 							Service: "testing/service1/tchouk",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/tchouk": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8089",
-										Weight: 1,
+										URL: "http://10.10.0.1:8089",
 									},
 									{
-										URL:    "http://10.10.0.2:8089",
-										Weight: 1,
+										URL: "http://10.10.0.2:8089",
 									},
 								},
 							},
@@ -580,11 +536,11 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with two paths using same service and different port name",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-tchouk/bar": {
 							Rule:    "Host(`traefik.tchouk`) && PathPrefix(`/bar`)",
 							Service: "testing/service1/tchouk",
@@ -594,35 +550,29 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 							Service: "testing/service1/carotte",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/tchouk": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8089",
-										Weight: 1,
+										URL: "http://10.10.0.1:8089",
 									},
 									{
-										URL:    "http://10.10.0.2:8089",
-										Weight: 1,
+										URL: "http://10.10.0.2:8089",
 									},
 								},
 							},
 						},
 						"testing/service1/carotte": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8090",
-										Weight: 1,
+										URL: "http://10.10.0.1:8090",
 									},
 									{
-										URL:    "http://10.10.0.2:8090",
-										Weight: 1,
+										URL: "http://10.10.0.2:8090",
 									},
 								},
 							},
@@ -633,11 +583,11 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "2 ingresses in different namespace with same service name",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-tchouk/bar": {
 							Rule:    "Host(`traefik.tchouk`) && PathPrefix(`/bar`)",
 							Service: "testing/service1/tchouk",
@@ -647,35 +597,29 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 							Service: "toto/service1/tchouk",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/tchouk": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8089",
-										Weight: 1,
+										URL: "http://10.10.0.1:8089",
 									},
 									{
-										URL:    "http://10.10.0.2:8089",
-										Weight: 1,
+										URL: "http://10.10.0.2:8089",
 									},
 								},
 							},
 						},
 						"toto/service1/tchouk": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.11.0.1:8089",
-										Weight: 1,
+										URL: "http://10.11.0.1:8089",
 									},
 									{
-										URL:    "http://10.11.0.2:8089",
-										Weight: 1,
+										URL: "http://10.11.0.2:8089",
 									},
 								},
 							},
@@ -686,47 +630,45 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with unknown service port name",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers:     map[string]*config.Router{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
 		{
 			desc: "Ingress with unknown service port",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers:     map[string]*config.Router{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
 		{
 			desc: "Ingress with service with externalName",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"traefik-tchouk/bar": {
 							Rule:    "Host(`traefik.tchouk`) && PathPrefix(`/bar`)",
 							Service: "testing/service1/8080",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/8080": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://traefik.wtf:8080",
-										Weight: 1,
+										URL: "http://traefik.wtf:8080",
 									},
 								},
 							},
@@ -737,36 +679,36 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "TLS support",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"example-com": {
 							Rule:    "Host(`example.com`)",
 							Service: "testing/example-com/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/example-com/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.11.0.1:80",
-										Weight: 1,
+										URL: "http://10.11.0.1:80",
 									},
 								},
 							},
 						},
 					},
 				},
-				TLS: []*tls.Configuration{
-					{
-						Certificate: &tls.Certificate{
-							CertFile: tls.FileOrContent("-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----"),
-							KeyFile:  tls.FileOrContent("-----BEGIN PRIVATE KEY-----\n-----END PRIVATE KEY-----"),
+				TLS: &dynamic.TLSConfiguration{
+					Certificates: []*tls.CertAndStores{
+						{
+							Certificate: tls.Certificate{
+								CertFile: tls.FileOrContent("-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----"),
+								KeyFile:  tls.FileOrContent("-----BEGIN PRIVATE KEY-----\n-----END PRIVATE KEY-----"),
+							},
 						},
 					},
 				},
@@ -774,29 +716,26 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with a basic rule on one path with https (port == 443)",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"/bar": {
 							Rule:    "PathPrefix(`/bar`)",
 							Service: "testing/service1/443",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/443": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "https://10.10.0.1:443",
-										Weight: 1,
+										URL: "https://10.10.0.1:443",
 									},
 									{
-										URL:    "https://10.21.0.1:443",
-										Weight: 1,
+										URL: "https://10.21.0.1:443",
 									},
 								},
 							},
@@ -807,29 +746,26 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with a basic rule on one path with https (portname == https)",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"/bar": {
 							Rule:    "PathPrefix(`/bar`)",
 							Service: "testing/service1/8443",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/8443": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "https://10.10.0.1:8443",
-										Weight: 1,
+										URL: "https://10.10.0.1:8443",
 									},
 									{
-										URL:    "https://10.21.0.1:8443",
-										Weight: 1,
+										URL: "https://10.21.0.1:8443",
 									},
 								},
 							},
@@ -840,30 +776,27 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with a basic rule on one path with https (portname starts with https)",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
 
-					Routers: map[string]*config.Router{
+					Routers: map[string]*dynamic.Router{
 						"/bar": {
 							Rule:    "PathPrefix(`/bar`)",
 							Service: "testing/service1/8443",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/8443": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "https://10.10.0.1:8443",
-										Weight: 1,
+										URL: "https://10.10.0.1:8443",
 									},
 									{
-										URL:    "https://10.21.0.1:8443",
-										Weight: 1,
+										URL: "https://10.21.0.1:8443",
 									},
 								},
 							},
@@ -874,30 +807,27 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Double Single Service Ingress",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"/": {
 							Rule:     "PathPrefix(`/`)",
 							Service:  "default-backend",
 							Priority: math.MinInt32,
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"default-backend": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.30.0.1:8080",
-										Weight: 1,
+										URL: "http://10.30.0.1:8080",
 									},
 									{
-										URL:    "http://10.41.0.1:8080",
-										Weight: 1,
+										URL: "http://10.41.0.1:8080",
 									},
 								},
 							},
@@ -908,25 +838,23 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress with default traefik ingressClass",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers: map[string]*config.Router{
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers: map[string]*dynamic.Router{
 						"/bar": {
 							Rule:    "PathPrefix(`/bar`)",
 							Service: "testing/service1/80",
 						},
 					},
-					Services: map[string]*config.Service{
+					Services: map[string]*dynamic.Service{
 						"testing/service1/80": {
-							LoadBalancer: &config.LoadBalancerService{
-								Method:         "wrr",
+							LoadBalancer: &dynamic.LoadBalancerService{
 								PassHostHeader: true,
-								Servers: []config.Server{
+								Servers: []dynamic.Server{
 									{
-										URL:    "http://10.10.0.1:8080",
-										Weight: 1,
+										URL: "http://10.10.0.1:8080",
 									},
 								},
 							},
@@ -937,48 +865,48 @@ func TestLoadConfigurationFromIngresses(t *testing.T) {
 		},
 		{
 			desc: "Ingress without provider traefik ingressClass and unknown annotation",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers:     map[string]*config.Router{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
 		{
 			desc:         "Ingress with non matching provider traefik ingressClass and annotation",
 			ingressClass: "tchouk",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers:     map[string]*config.Router{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
 		{
 			desc:         "Ingress with ingressClass without annotation",
 			ingressClass: "tchouk",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers:     map[string]*config.Router{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
 		{
 			desc:         "Ingress with ingressClass without annotation",
 			ingressClass: "toto",
-			expected: &config.Configuration{
-				TCP: &config.TCPConfiguration{},
-				HTTP: &config.HTTPConfiguration{
-					Middlewares: map[string]*config.Middleware{},
-					Routers:     map[string]*config.Router{},
-					Services:    map[string]*config.Service{},
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{},
+				HTTP: &dynamic.HTTPConfiguration{
+					Middlewares: map[string]*dynamic.Middleware{},
+					Routers:     map[string]*dynamic.Router{},
+					Services:    map[string]*dynamic.Service{},
 				},
 			},
 		},
@@ -1047,7 +975,7 @@ func TestGetTLS(t *testing.T) {
 		desc      string
 		ingress   *v1beta1.Ingress
 		client    Client
-		result    map[string]*tls.Configuration
+		result    map[string]*tls.CertAndStores
 		errResult string
 	}{
 		{
@@ -1154,15 +1082,15 @@ func TestGetTLS(t *testing.T) {
 					},
 				},
 			},
-			result: map[string]*tls.Configuration{
+			result: map[string]*tls.CertAndStores{
 				"testing/test-secret": {
-					Certificate: &tls.Certificate{
+					Certificate: tls.Certificate{
 						CertFile: tls.FileOrContent("tls-crt"),
 						KeyFile:  tls.FileOrContent("tls-key"),
 					},
 				},
 				"testing/test-secret2": {
-					Certificate: &tls.Certificate{
+					Certificate: tls.Certificate{
 						CertFile: tls.FileOrContent("tls-crt"),
 						KeyFile:  tls.FileOrContent("tls-key"),
 					},
@@ -1173,7 +1101,7 @@ func TestGetTLS(t *testing.T) {
 			desc:    "return nil when no secret is defined",
 			ingress: testIngressWithoutSecret,
 			client:  clientMock{},
-			result:  map[string]*tls.Configuration{},
+			result:  map[string]*tls.CertAndStores{},
 		},
 	}
 
@@ -1182,7 +1110,7 @@ func TestGetTLS(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			tlsConfigs := map[string]*tls.Configuration{}
+			tlsConfigs := map[string]*tls.CertAndStores{}
 			err := getTLS(context.Background(), test.ingress, test.client, tlsConfigs)
 
 			if test.errResult != "" {

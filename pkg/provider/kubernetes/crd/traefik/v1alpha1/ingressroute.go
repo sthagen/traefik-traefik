@@ -21,19 +21,32 @@ type Route struct {
 }
 
 // TLS contains the TLS certificates configuration of the routes. To enable
-// Let's Encrypt, set a SecretName with an empty value.
+// Let's Encrypt, use an empty TLS struct, e.g. in YAML:
+//
+// tls: {} # inline format
+//
+// tls:
+//   secretName: # block format
 type TLS struct {
 	// SecretName is the name of the referenced Kubernetes Secret to specify the
 	// certificate details.
 	SecretName string `json:"secretName"`
-	// TODO MinimumProtocolVersion string `json:"minimumProtocolVersion,omitempty"`
+	// Options is a reference to a TLSOption, that specifies the parameters of the TLS connection.
+	Options      *TLSOptionRef `json:"options"`
+	CertResolver string        `json:"certResolver"`
+}
+
+// TLSOptionRef is a ref to the TLSOption resources.
+type TLSOptionRef struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
 }
 
 // Service defines an upstream to proxy traffic.
 type Service struct {
-	Name string `json:"name"`
-	Port int32  `json:"port"`
-	// TODO Weight      int          `json:"weight,omitempty"`
+	Name        string       `json:"name"`
+	Port        int32        `json:"port"`
+	Scheme      string       `json:"scheme,omitempty"`
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty"`
 	Strategy    string       `json:"strategy,omitempty"`
 }

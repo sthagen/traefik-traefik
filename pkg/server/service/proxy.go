@@ -10,9 +10,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/containous/flaeg/parse"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/containous/traefik/pkg/log"
+	"github.com/containous/traefik/pkg/types"
 )
 
 // StatusClientClosedRequest non-standard HTTP status code for client disconnection
@@ -21,8 +21,8 @@ const StatusClientClosedRequest = 499
 // StatusClientClosedRequestText non-standard HTTP status for client disconnection
 const StatusClientClosedRequestText = "Client Closed Request"
 
-func buildProxy(passHostHeader bool, responseForwarding *config.ResponseForwarding, defaultRoundTripper http.RoundTripper, bufferPool httputil.BufferPool, responseModifier func(*http.Response) error) (http.Handler, error) {
-	var flushInterval parse.Duration
+func buildProxy(passHostHeader bool, responseForwarding *dynamic.ResponseForwarding, defaultRoundTripper http.RoundTripper, bufferPool httputil.BufferPool, responseModifier func(*http.Response) error) (http.Handler, error) {
+	var flushInterval types.Duration
 	if responseForwarding != nil {
 		err := flushInterval.Set(responseForwarding.FlushInterval)
 		if err != nil {
@@ -30,7 +30,7 @@ func buildProxy(passHostHeader bool, responseForwarding *config.ResponseForwardi
 		}
 	}
 	if flushInterval == 0 {
-		flushInterval = parse.Duration(100 * time.Millisecond)
+		flushInterval = types.Duration(100 * time.Millisecond)
 	}
 
 	proxy := &httputil.ReverseProxy{

@@ -1,12 +1,12 @@
 [global]
-checkNewVersion = false
-sendAnonymousUsage = false
+  checkNewVersion = false
+  sendAnonymousUsage = false
 
 [log]
-level = "DEBUG"
+  level = "DEBUG"
 
 [serversTransport]
-rootCAs = [ """{{ .RootCertContent }}""" ]
+  rootCAs = [ """{{ .RootCertContent }}""" ]
 
 [entryPoints]
   [entryPoints.web-secure]
@@ -15,16 +15,20 @@ rootCAs = [ """{{ .RootCertContent }}""" ]
 [api]
 
 [providers]
-   [providers.docker]
-      endpoint = "unix:///var/run/docker.sock"
-      watch = true
+  [providers.docker]
+    watch = true
 
-   [providers.file]
+  [providers.file]
+    filename = "{{ .SelfFilename }}"
 
-[tlsOptions.default.ClientCA]
-    files = [ """{{ .RootCertContent }}""" ]
-    optional = false
+## dynamic configuration ##
 
-[tlsStores.default.DefaultCertificate]
+[tls.options]
+  [tls.options.default.clientAuth]
+    caFiles = [ """{{ .RootCertContent }}""" ]
+    clientAuthType = "RequireAndVerifyClientCert"
+
+[tls.stores]
+  [tls.stores.default.defaultCertificate]
     certFile = """{{ .ServerCertContent }}"""
     keyFile  = """{{ .ServerKeyContent }}"""

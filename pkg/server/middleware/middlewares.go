@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/containous/alice"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/runtime"
 	"github.com/containous/traefik/pkg/middlewares/addprefix"
 	"github.com/containous/traefik/pkg/middlewares/auth"
 	"github.com/containous/traefik/pkg/middlewares/buffering"
@@ -20,7 +20,6 @@ import (
 	"github.com/containous/traefik/pkg/middlewares/ipwhitelist"
 	"github.com/containous/traefik/pkg/middlewares/maxconnection"
 	"github.com/containous/traefik/pkg/middlewares/passtlsclientcert"
-	"github.com/containous/traefik/pkg/middlewares/ratelimiter"
 	"github.com/containous/traefik/pkg/middlewares/redirect"
 	"github.com/containous/traefik/pkg/middlewares/replacepath"
 	"github.com/containous/traefik/pkg/middlewares/replacepathregex"
@@ -39,7 +38,7 @@ const (
 
 // Builder the middleware builder
 type Builder struct {
-	configs        map[string]*config.Middleware
+	configs        map[string]*runtime.MiddlewareInfo
 	serviceBuilder serviceBuilder
 }
 
@@ -48,7 +47,7 @@ type serviceBuilder interface {
 }
 
 // NewBuilder creates a new Builder
-func NewBuilder(configs map[string]*config.Middleware, serviceBuilder serviceBuilder) *Builder {
+func NewBuilder(configs map[string]*runtime.MiddlewareInfo, serviceBuilder serviceBuilder) *Builder {
 	return &Builder{configs: configs, serviceBuilder: serviceBuilder}
 }
 
@@ -60,20 +59,29 @@ func (b *Builder) BuildChain(ctx context.Context, middlewares []string) *alice.C
 
 		chain = chain.Append(func(next http.Handler) (http.Handler, error) {
 			constructorContext := internal.AddProviderInContext(ctx, middlewareName)
-			if _, ok := b.configs[middlewareName]; !ok {
+			if midInf, ok := b.configs[middlewareName]; !ok || midInf.Middleware == nil {
 				return nil, fmt.Errorf("middleware %q does not exist", middlewareName)
 			}
 
 			var err error
 			if constructorContext, err = checkRecursion(constructorContext, middlewareName); err != nil {
+				b.configs[middlewareName].AddError(err, true)
 				return nil, err
 			}
 
-			constructor, err := b.buildConstructor(constructorContext, middlewareName, *b.configs[middlewareName])
+			constructor, err := b.buildConstructor(constructorContext, middlewareName)
 			if err != nil {
-				return nil, fmt.Errorf("error during instanciation of %s: %v", middlewareName, err)
+				b.configs[middlewareName].AddError(err, true)
+				return nil, err
 			}
-			return constructor(next)
+
+			handler, err := constructor(next)
+			if err != nil {
+				b.configs[middlewareName].AddError(err, true)
+				return nil, err
+			}
+
+			return handler, nil
 		})
 	}
 	return &chain
@@ -90,7 +98,9 @@ func checkRecursion(ctx context.Context, middlewareName string) (context.Context
 	return context.WithValue(ctx, middlewareStackKey, append(currentStack, middlewareName)), nil
 }
 
-func (b *Builder) buildConstructor(ctx context.Context, middlewareName string, config config.Middleware) (alice.Constructor, error) {
+// it is the responsibility of the caller to make sure that b.configs[middlewareName].Middleware exists
+func (b *Builder) buildConstructor(ctx context.Context, middlewareName string) (alice.Constructor, error) {
+	config := b.configs[middlewareName]
 	var middleware alice.Constructor
 	badConf := errors.New("cannot create middleware: multi-types middleware not supported, consider declaring two different pieces of middleware instead")
 
@@ -221,15 +231,16 @@ func (b *Builder) buildConstructor(ctx context.Context, middlewareName string, c
 		}
 	}
 
+	// TODO: disable temporarily (rateLimit)
 	// RateLimit
-	if config.RateLimit != nil {
-		if middleware != nil {
-			return nil, badConf
-		}
-		middleware = func(next http.Handler) (http.Handler, error) {
-			return ratelimiter.New(ctx, next, *config.RateLimit, middlewareName)
-		}
-	}
+	// if config.RateLimit != nil {
+	// 	if middleware != nil {
+	// 		return nil, badConf
+	// 	}
+	// 	middleware = func(next http.Handler) (http.Handler, error) {
+	// 		return ratelimiter.New(ctx, next, *config.RateLimit, middlewareName)
+	// 	}
+	// }
 
 	// RedirectRegex
 	if config.RedirectRegex != nil {

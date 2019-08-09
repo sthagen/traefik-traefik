@@ -5,41 +5,75 @@ Reading What's Happening
 
 By default, logs are written to stdout, in text format.
 
-## Configuration Example
-
-??? example "Writing Logs in a File"
-
-    ```toml
-    [log]
-    filePath = "/path/to/traefik.log"
-    ```
-
-??? example "Writing Logs in a File, in JSON"
-
-    ```toml
-    [log]
-    filePath = "/path/to/log-file.log"
-    format   = "json"
-    ```
-
-## Configuration Options
+## Configuration
 
 ### General
 
 Traefik logs concern everything that happens to Traefik itself (startup, configuration, events, shutdown, and so on).
 
-#### filePath
+#### `filePath`
 
 By default, the logs are written to the standard output.
 You can configure a file path instead using the `filePath` option.
 
-#### format
+```toml tab="File (TOML)"
+# Writing Logs to a File
+[log]
+  filePath = "/path/to/traefik.log"
+```
+
+```yaml tab="File (YAML)"
+# Writing Logs to a File
+log:
+  filePath: "/path/to/traefik.log"
+```
+
+```bash tab="CLI"
+# Writing Logs to a File
+--log.filePath="/path/to/traefik.log"
+```
+
+#### `format`
 
 By default, the logs use a text format (`common`), but you can also ask for the `json` format in the `format` option.   
 
-#### log level
+```toml tab="File (TOML)"
+# Writing Logs to a File, in JSON
+[log]
+  filePath = "/path/to/log-file.log"
+  format = "json"
+```
 
-By default, the `level` is set to `error`, but you can choose amongst `debug`, `panic`, `fatal`, `error`, `warn`, and `info`. 
+```yaml tab="File (YAML)"
+# Writing Logs to a File, in JSON
+log:
+  filePath: "/path/to/log-file.log"
+  format: json
+```
+
+```bash tab="CLI"
+# Writing Logs to a File, in JSON
+--log.filePath="/path/to/traefik.log"
+--log.format="json"
+```
+
+#### `level`
+
+By default, the `level` is set to `ERROR`. Alternative logging levels are `DEBUG`, `PANIC`, `FATAL`, `ERROR`, `WARN`, and `INFO`. 
+
+```toml tab="File (TOML)"
+[log]
+  level = "DEBUG"
+```
+
+```yaml tab="File (YAML)"
+log:
+  level: DEBUG
+```
+
+```bash tab="CLI"
+--log.level="DEBUG"
+```
 
 ## Log Rotation
 

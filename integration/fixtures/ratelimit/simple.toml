@@ -1,39 +1,42 @@
 [global]
-checkNewVersion = false
-sendAnonymousUsage = false
+  checkNewVersion = false
+  sendAnonymousUsage = false
+
+[api]
 
 [log]
-level = "DEBUG"
+  level = "DEBUG"
 
 [entryPoints]
   [entryPoints.web]
-  address = ":80"
+    address = ":8081"
 
-[providers]
-   [providers.file]
+[providers.file]
+  filename = "{{ .SelfFilename }}"
+
+## dynamic configuration ##
 
 [http.routers]
   [http.routers.router1]
-    Service = "service1"
-    Middlewares = [ "ratelimit" ]
-    Rule = "Path(`/`)"
+    service = "service1"
+    middlewares = [ "ratelimit" ]
+    rule = "Path(`/`)"
 
 [http.middlewares]
-  [http.middlewares.ratelimit.RateLimit]
+  [http.middlewares.ratelimit.rateLimit]
     extractorfunc = "client.ip"
-      [http.middlewares.ratelimit.RateLimit.rateset.rateset1]
-      period = "60s"
-      average = 4
-      burst = 5
-      [http.middlewares.ratelimit.RateLimit.rateset.rateset2]
-      period = "3s"
-      average = 1
-      burst = 2
+      [http.middlewares.ratelimit.rateLimit.rateSet.rateset1]
+        period = "60s"
+        average = 4
+        burst = 5
+      [http.middlewares.ratelimit.rateLimit.rateSet.rateset2]
+        period = "3s"
+        average = 1
+        burst = 2
 
 [http.services]
   [http.services.service1]
-    [http.services.service1.LoadBalancer]
+    [http.services.service1.loadBalancer]
       passHostHeader = true
-      [[http.services.service1.LoadBalancer.Servers]]
-        URL = "http://{{.Server1}}:80"
-        Weight = 1
+      [[http.services.service1.loadBalancer.servers]]
+        url = "http://{{.Server1}}:80"

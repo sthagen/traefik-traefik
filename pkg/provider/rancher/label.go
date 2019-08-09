@@ -1,12 +1,11 @@
 package rancher
 
 import (
-	"github.com/containous/traefik/pkg/provider/label"
+	"github.com/containous/traefik/pkg/config/label"
 )
 
 type configuration struct {
 	Enable bool
-	Tags   []string
 }
 
 func (p *Provider) getConfiguration(service rancherData) (configuration, error) {
@@ -14,7 +13,7 @@ func (p *Provider) getConfiguration(service rancherData) (configuration, error) 
 		Enable: p.ExposedByDefault,
 	}
 
-	err := label.Decode(service.Labels, &conf, "traefik.rancher.", "traefik.enable", "traefik.tags")
+	err := label.Decode(service.Labels, &conf, "traefik.rancher.", "traefik.enable")
 	if err != nil {
 		return configuration{}, err
 	}

@@ -1,82 +1,91 @@
 package types
 
 import (
-	"fmt"
-	"strconv"
-	"strings"
+	"time"
 )
 
-// Metrics provides options to expose and send Traefik metrics to different third party monitoring systems
+// Metrics provides options to expose and send Traefik metrics to different third party monitoring systems.
 type Metrics struct {
-	Prometheus *Prometheus `description:"Prometheus metrics exporter type" export:"true"`
-	Datadog    *Datadog    `description:"DataDog metrics exporter type" export:"true"`
-	StatsD     *Statsd     `description:"StatsD metrics exporter type" export:"true"`
-	InfluxDB   *InfluxDB   `description:"InfluxDB metrics exporter type"`
+	Prometheus *Prometheus `description:"Prometheus metrics exporter type." json:"prometheus,omitempty" toml:"prometheus,omitempty" yaml:"prometheus,omitempty" export:"true" label:"allowEmpty"`
+	DataDog    *DataDog    `description:"DataDog metrics exporter type." json:"dataDog,omitempty" toml:"dataDog,omitempty" yaml:"dataDog,omitempty" export:"true" label:"allowEmpty"`
+	StatsD     *Statsd     `description:"StatsD metrics exporter type." json:"statsD,omitempty" toml:"statsD,omitempty" yaml:"statsD,omitempty" export:"true" label:"allowEmpty"`
+	InfluxDB   *InfluxDB   `description:"InfluxDB metrics exporter type." json:"influxDB,omitempty" toml:"influxDB,omitempty" yaml:"influxDB,omitempty" label:"allowEmpty"`
 }
 
-// Prometheus can contain specific configuration used by the Prometheus Metrics exporter
+// Prometheus can contain specific configuration used by the Prometheus Metrics exporter.
 type Prometheus struct {
-	Buckets     Buckets  `description:"Buckets for latency metrics" export:"true"`
-	EntryPoint  string   `description:"EntryPoint" export:"true"`
-	Middlewares []string `description:"Middlewares" export:"true"`
+	Buckets              []float64 `description:"Buckets for latency metrics." json:"buckets,omitempty" toml:"buckets,omitempty" yaml:"buckets,omitempty" export:"true"`
+	AddEntryPointsLabels bool      `description:"Enable metrics on entry points." json:"addEntryPointsLabels,omitempty" toml:"addEntryPointsLabels,omitempty" yaml:"addEntryPointsLabels,omitempty" export:"true"`
+	AddServicesLabels    bool      `description:"Enable metrics on services." json:"addServicesLabels,omitempty" toml:"addServicesLabels,omitempty" yaml:"addServicesLabels,omitempty" export:"true"`
 }
 
-// Datadog contains address and metrics pushing interval configuration
-type Datadog struct {
-	Address      string `description:"DataDog's address"`
-	PushInterval string `description:"DataDog push interval" export:"true"`
+// SetDefaults sets the default values.
+func (p *Prometheus) SetDefaults() {
+	p.Buckets = []float64{0.1, 0.3, 1.2, 5}
+	p.AddEntryPointsLabels = true
+	p.AddServicesLabels = true
 }
 
-// Statsd contains address and metrics pushing interval configuration
+// DataDog contains address and metrics pushing interval configuration.
+type DataDog struct {
+	Address              string   `description:"DataDog's address." json:"address,omitempty" toml:"address,omitempty" yaml:"address,omitempty"`
+	PushInterval         Duration `description:"DataDog push interval." json:"pushInterval,omitempty" toml:"pushInterval,omitempty" yaml:"pushInterval,omitempty" export:"true"`
+	AddEntryPointsLabels bool     `description:"Enable metrics on entry points." json:"addEntryPointsLabels,omitempty" toml:"addEntryPointsLabels,omitempty" yaml:"addEntryPointsLabels,omitempty" export:"true"`
+	AddServicesLabels    bool     `description:"Enable metrics on services." json:"addServicesLabels,omitempty" toml:"addServicesLabels,omitempty" yaml:"addServicesLabels,omitempty" export:"true"`
+}
+
+// SetDefaults sets the default values.
+func (d *DataDog) SetDefaults() {
+	d.Address = "localhost:8125"
+	d.PushInterval = Duration(10 * time.Second)
+	d.AddEntryPointsLabels = true
+	d.AddServicesLabels = true
+}
+
+// Statsd contains address and metrics pushing interval configuration.
 type Statsd struct {
-	Address      string `description:"StatsD address"`
-	PushInterval string `description:"StatsD push interval" export:"true"`
+	Address              string   `description:"StatsD address." json:"address,omitempty" toml:"address,omitempty" yaml:"address,omitempty"`
+	PushInterval         Duration `description:"StatsD push interval." json:"pushInterval,omitempty" toml:"pushInterval,omitempty" yaml:"pushInterval,omitempty" export:"true"`
+	AddEntryPointsLabels bool     `description:"Enable metrics on entry points." json:"addEntryPointsLabels,omitempty" toml:"addEntryPointsLabels,omitempty" yaml:"addEntryPointsLabels,omitempty" export:"true"`
+	AddServicesLabels    bool     `description:"Enable metrics on services." json:"addServicesLabels,omitempty" toml:"addServicesLabels,omitempty" yaml:"addServicesLabels,omitempty" export:"true"`
 }
 
-// InfluxDB contains address, login and metrics pushing interval configuration
+// SetDefaults sets the default values.
+func (s *Statsd) SetDefaults() {
+	s.Address = "localhost:8125"
+	s.PushInterval = Duration(10 * time.Second)
+	s.AddEntryPointsLabels = true
+	s.AddServicesLabels = true
+}
+
+// InfluxDB contains address, login and metrics pushing interval configuration.
 type InfluxDB struct {
-	Address         string `description:"InfluxDB address"`
-	Protocol        string `description:"InfluxDB address protocol (udp or http)"`
-	PushInterval    string `description:"InfluxDB push interval" export:"true"`
-	Database        string `description:"InfluxDB database used when protocol is http" export:"true"`
-	RetentionPolicy string `description:"InfluxDB retention policy used when protocol is http" export:"true"`
-	Username        string `description:"InfluxDB username (only with http)" export:"true"`
-	Password        string `description:"InfluxDB password (only with http)" export:"true"`
+	Address              string   `description:"InfluxDB address." json:"address,omitempty" toml:"address,omitempty" yaml:"address,omitempty"`
+	Protocol             string   `description:"InfluxDB address protocol (udp or http)." json:"protocol,omitempty" toml:"protocol,omitempty" yaml:"protocol,omitempty"`
+	PushInterval         Duration `description:"InfluxDB push interval." json:"pushInterval,omitempty" toml:"pushInterval,omitempty" yaml:"pushInterval,omitempty" export:"true"`
+	Database             string   `description:"InfluxDB database used when protocol is http." json:"database,omitempty" toml:"database,omitempty" yaml:"database,omitempty" export:"true"`
+	RetentionPolicy      string   `description:"InfluxDB retention policy used when protocol is http." json:"retentionPolicy,omitempty" toml:"retentionPolicy,omitempty" yaml:"retentionPolicy,omitempty" export:"true"`
+	Username             string   `description:"InfluxDB username (only with http)." json:"username,omitempty" toml:"username,omitempty" yaml:"username,omitempty" export:"true"`
+	Password             string   `description:"InfluxDB password (only with http)." json:"password,omitempty" toml:"password,omitempty" yaml:"password,omitempty" export:"true"`
+	AddEntryPointsLabels bool     `description:"Enable metrics on entry points." json:"addEntryPointsLabels,omitempty" toml:"addEntryPointsLabels,omitempty" yaml:"addEntryPointsLabels,omitempty" export:"true"`
+	AddServicesLabels    bool     `description:"Enable metrics on services." json:"addServicesLabels,omitempty" toml:"addServicesLabels,omitempty" yaml:"addServicesLabels,omitempty" export:"true"`
 }
 
-// Statistics provides options for monitoring request and response stats
+// SetDefaults sets the default values.
+func (i *InfluxDB) SetDefaults() {
+	i.Address = "localhost:8089"
+	i.Protocol = "udp"
+	i.PushInterval = Duration(10 * time.Second)
+	i.AddEntryPointsLabels = true
+	i.AddServicesLabels = true
+}
+
+// Statistics provides options for monitoring request and response stats.
 type Statistics struct {
-	RecentErrors int `description:"Number of recent errors logged" export:"true"`
+	RecentErrors int `description:"Number of recent errors logged." json:"recentErrors,omitempty" toml:"recentErrors,omitempty" yaml:"recentErrors,omitempty" export:"true"`
 }
 
-// Buckets holds Prometheus Buckets
-type Buckets []float64
-
-// Set adds strings elem into the the parser
-// it splits str on "," and ";" and apply ParseFloat to string
-func (b *Buckets) Set(str string) error {
-	fargs := func(c rune) bool {
-		return c == ',' || c == ';'
-	}
-	// get function
-	slice := strings.FieldsFunc(str, fargs)
-	for _, bucket := range slice {
-		bu, err := strconv.ParseFloat(bucket, 64)
-		if err != nil {
-			return err
-		}
-		*b = append(*b, bu)
-	}
-	return nil
-}
-
-// Get []float64
-func (b *Buckets) Get() interface{} { return *b }
-
-// String return slice in a string
-func (b *Buckets) String() string { return fmt.Sprintf("%v", *b) }
-
-// SetValue sets []float64 into the parser
-func (b *Buckets) SetValue(val interface{}) {
-	*b = val.(Buckets)
+// SetDefaults sets the default values.
+func (s *Statistics) SetDefaults() {
+	s.RecentErrors = 10
 }

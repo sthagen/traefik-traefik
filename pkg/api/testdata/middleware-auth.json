@@ -1,0 +1,14 @@
+{
+	"basicAuth": {
+		"users": [
+			"admin:admin"
+		]
+	},
+	"name": "auth@myprovider",
+	"provider": "myprovider",
+	"status": "enabled",
+	"usedBy": [
+		"bar@myprovider",
+		"test@myprovider"
+	]
+}

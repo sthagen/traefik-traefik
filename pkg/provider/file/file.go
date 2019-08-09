@@ -7,19 +7,19 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/containous/traefik/pkg/log"
 	"github.com/containous/traefik/pkg/provider"
 	"github.com/containous/traefik/pkg/safe"
 	"github.com/containous/traefik/pkg/tls"
 	"gopkg.in/fsnotify.v1"
+	"gopkg.in/yaml.v2"
 )
 
 const providerName = "file"
@@ -28,11 +28,16 @@ var _ provider.Provider = (*Provider)(nil)
 
 // Provider holds configurations of the provider.
 type Provider struct {
-	Directory                 string `description:"Load configuration from one or more .toml files in a directory" export:"true"`
-	Watch                     bool   `description:"Watch provider" export:"true"`
-	Filename                  string `description:"Override default configuration template. For advanced users :)" export:"true"`
-	DebugLogGeneratedTemplate bool   `description:"Enable debug logging of generated configuration template." export:"true"`
-	TraefikFile               string
+	Directory                 string `description:"Load configuration from one or more .toml files in a directory." json:"directory,omitempty" toml:"directory,omitempty" yaml:"directory,omitempty" export:"true"`
+	Watch                     bool   `description:"Watch provider." json:"watch,omitempty" toml:"watch,omitempty" yaml:"watch,omitempty" export:"true"`
+	Filename                  string `description:"Override default configuration template. For advanced users :)" json:"filename,omitempty" toml:"filename,omitempty" yaml:"filename,omitempty" export:"true"`
+	DebugLogGeneratedTemplate bool   `description:"Enable debug logging of generated configuration template." json:"debugLogGeneratedTemplate,omitempty" toml:"debugLogGeneratedTemplate,omitempty" yaml:"debugLogGeneratedTemplate,omitempty" export:"true"`
+}
+
+// SetDefaults sets the default values.
+func (p *Provider) SetDefaults() {
+	p.Watch = true
+	p.Filename = ""
 }
 
 // Init the provider
@@ -42,7 +47,7 @@ func (p *Provider) Init() error {
 
 // Provide allows the file provider to provide configurations to traefik
 // using the given configuration channel.
-func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.Pool) error {
+func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.Pool) error {
 	configuration, err := p.BuildConfiguration()
 
 	if err != nil {
@@ -58,7 +63,7 @@ func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.P
 		case len(p.Filename) > 0:
 			watchItem = filepath.Dir(p.Filename)
 		default:
-			watchItem = filepath.Dir(p.TraefikFile)
+			return errors.New("error using file configuration provider, neither filename or directory defined")
 		}
 
 		if err := p.addWatcher(pool, watchItem, configurationChan, p.watcherCallback); err != nil {
@@ -72,7 +77,7 @@ func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.P
 
 // BuildConfiguration loads configuration either from file or a directory specified by 'Filename'/'Directory'
 // and returns a 'Configuration' object
-func (p *Provider) BuildConfiguration() (*config.Configuration, error) {
+func (p *Provider) BuildConfiguration() (*dynamic.Configuration, error) {
 	ctx := log.With(context.Background(), log.Str(log.ProviderName, providerName))
 
 	if len(p.Directory) > 0 {
@@ -83,14 +88,10 @@ func (p *Provider) BuildConfiguration() (*config.Configuration, error) {
 		return p.loadFileConfig(p.Filename, true)
 	}
 
-	if len(p.TraefikFile) > 0 {
-		return p.loadFileConfig(p.TraefikFile, false)
-	}
-
-	return nil, errors.New("error using file configuration backend, no filename defined")
+	return nil, errors.New("error using file configuration provider, neither filename or directory defined")
 }
 
-func (p *Provider) addWatcher(pool *safe.Pool, directory string, configurationChan chan<- config.Message, callback func(chan<- config.Message, fsnotify.Event)) error {
+func (p *Provider) addWatcher(pool *safe.Pool, directory string, configurationChan chan<- dynamic.Message, callback func(chan<- dynamic.Message, fsnotify.Event)) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("error creating file watcher: %s", err)
@@ -110,15 +111,8 @@ func (p *Provider) addWatcher(pool *safe.Pool, directory string, configurationCh
 				return
 			case evt := <-watcher.Events:
 				if p.Directory == "" {
-					var filename string
-					if len(p.Filename) > 0 {
-						filename = p.Filename
-					} else {
-						filename = p.TraefikFile
-					}
-
 					_, evtFileName := filepath.Split(evt.Name)
-					_, confFileName := filepath.Split(filename)
+					_, confFileName := filepath.Split(p.Filename)
 					if evtFileName == confFileName {
 						callback(configurationChan, evt)
 					}
@@ -133,12 +127,10 @@ func (p *Provider) addWatcher(pool *safe.Pool, directory string, configurationCh
 	return nil
 }
 
-func (p *Provider) watcherCallback(configurationChan chan<- config.Message, event fsnotify.Event) {
-	watchItem := p.TraefikFile
+func (p *Provider) watcherCallback(configurationChan chan<- dynamic.Message, event fsnotify.Event) {
+	watchItem := p.Filename
 	if len(p.Directory) > 0 {
 		watchItem = p.Directory
-	} else if len(p.Filename) > 0 {
-		watchItem = p.Filename
 	}
 
 	logger := log.WithoutContext().WithField(log.ProviderName, providerName)
@@ -157,101 +149,101 @@ func (p *Provider) watcherCallback(configurationChan chan<- config.Message, even
 	sendConfigToChannel(configurationChan, configuration)
 }
 
-func sendConfigToChannel(configurationChan chan<- config.Message, configuration *config.Configuration) {
-	configurationChan <- config.Message{
+func sendConfigToChannel(configurationChan chan<- dynamic.Message, configuration *dynamic.Configuration) {
+	configurationChan <- dynamic.Message{
 		ProviderName:  "file",
 		Configuration: configuration,
 	}
 }
 
-func readFile(filename string) (string, error) {
-	if len(filename) > 0 {
-		buf, err := ioutil.ReadFile(filename)
-		if err != nil {
-			return "", err
-		}
-		return string(buf), nil
-	}
-	return "", fmt.Errorf("invalid filename: %s", filename)
-}
-
-func (p *Provider) loadFileConfig(filename string, parseTemplate bool) (*config.Configuration, error) {
-	fileContent, err := readFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("error reading configuration file: %s - %s", filename, err)
-	}
-
-	var configuration *config.Configuration
+func (p *Provider) loadFileConfig(filename string, parseTemplate bool) (*dynamic.Configuration, error) {
+	var err error
+	var configuration *dynamic.Configuration
 	if parseTemplate {
-		configuration, err = p.CreateConfiguration(fileContent, template.FuncMap{}, false)
+		configuration, err = p.CreateConfiguration(filename, template.FuncMap{}, false)
 	} else {
-		configuration, err = p.DecodeConfiguration(fileContent)
+		configuration, err = p.DecodeConfiguration(filename)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	var tlsConfigs []*tls.Configuration
-	for _, conf := range configuration.TLS {
-		bytes, err := conf.Certificate.CertFile.Read()
-		if err != nil {
-			log.Error(err)
-			continue
-		}
-		conf.Certificate.CertFile = tls.FileOrContent(string(bytes))
-
-		bytes, err = conf.Certificate.KeyFile.Read()
-		if err != nil {
-			log.Error(err)
-			continue
-		}
-		conf.Certificate.KeyFile = tls.FileOrContent(string(bytes))
-		tlsConfigs = append(tlsConfigs, conf)
+	if configuration.TLS != nil {
+		configuration.TLS.Certificates = flattenCertificates(configuration.TLS)
 	}
-	configuration.TLS = tlsConfigs
 
 	return configuration, nil
 }
 
-func (p *Provider) loadFileConfigFromDirectory(ctx context.Context, directory string, configuration *config.Configuration) (*config.Configuration, error) {
+func flattenCertificates(tlsConfig *dynamic.TLSConfiguration) []*tls.CertAndStores {
+	var certs []*tls.CertAndStores
+	for _, cert := range tlsConfig.Certificates {
+		content, err := cert.Certificate.CertFile.Read()
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		cert.Certificate.CertFile = tls.FileOrContent(string(content))
+
+		content, err = cert.Certificate.KeyFile.Read()
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		cert.Certificate.KeyFile = tls.FileOrContent(string(content))
+
+		certs = append(certs, cert)
+	}
+
+	return certs
+}
+
+func (p *Provider) loadFileConfigFromDirectory(ctx context.Context, directory string, configuration *dynamic.Configuration) (*dynamic.Configuration, error) {
 	logger := log.FromContext(ctx)
 
 	fileList, err := ioutil.ReadDir(directory)
-
 	if err != nil {
 		return configuration, fmt.Errorf("unable to read directory %s: %v", directory, err)
 	}
 
 	if configuration == nil {
-		configuration = &config.Configuration{
-			HTTP: &config.HTTPConfiguration{
-				Routers:     make(map[string]*config.Router),
-				Middlewares: make(map[string]*config.Middleware),
-				Services:    make(map[string]*config.Service),
+		configuration = &dynamic.Configuration{
+			HTTP: &dynamic.HTTPConfiguration{
+				Routers:     make(map[string]*dynamic.Router),
+				Middlewares: make(map[string]*dynamic.Middleware),
+				Services:    make(map[string]*dynamic.Service),
 			},
-			TCP: &config.TCPConfiguration{
-				Routers:  make(map[string]*config.TCPRouter),
-				Services: make(map[string]*config.TCPService),
+			TCP: &dynamic.TCPConfiguration{
+				Routers:  make(map[string]*dynamic.TCPRouter),
+				Services: make(map[string]*dynamic.TCPService),
+			},
+			TLS: &dynamic.TLSConfiguration{
+				Stores:  make(map[string]tls.Store),
+				Options: make(map[string]tls.Options),
 			},
 		}
 	}
 
-	configTLSMaps := make(map[*tls.Configuration]struct{})
-	for _, item := range fileList {
+	configTLSMaps := make(map[*tls.CertAndStores]struct{})
 
+	for _, item := range fileList {
 		if item.IsDir() {
 			configuration, err = p.loadFileConfigFromDirectory(ctx, filepath.Join(directory, item.Name()), configuration)
 			if err != nil {
 				return configuration, fmt.Errorf("unable to load content configuration from subdirectory %s: %v", item, err)
 			}
 			continue
-		} else if !strings.HasSuffix(item.Name(), ".toml") && !strings.HasSuffix(item.Name(), ".tmpl") {
+		}
+
+		switch strings.ToLower(filepath.Ext(item.Name())) {
+		case ".toml", ".yaml", ".yml":
+			// noop
+		default:
 			continue
 		}
 
-		var c *config.Configuration
-		c, err = p.loadFileConfig(path.Join(directory, item.Name()), true)
-
+		var c *dynamic.Configuration
+		c, err = p.loadFileConfig(filepath.Join(directory, item.Name()), true)
 		if err != nil {
 			return configuration, err
 		}
@@ -296,23 +288,55 @@ func (p *Provider) loadFileConfigFromDirectory(ctx context.Context, directory st
 			}
 		}
 
-		for _, conf := range c.TLS {
+		for _, conf := range c.TLS.Certificates {
 			if _, exists := configTLSMaps[conf]; exists {
 				logger.Warnf("TLS configuration %v already configured, skipping", conf)
 			} else {
 				configTLSMaps[conf] = struct{}{}
 			}
 		}
+
+		for name, conf := range c.TLS.Options {
+			if _, exists := configuration.TLS.Options[name]; exists {
+				logger.Warnf("TLS options %v already configured, skipping", name)
+			} else {
+				if configuration.TLS.Options == nil {
+					configuration.TLS.Options = map[string]tls.Options{}
+				}
+				configuration.TLS.Options[name] = conf
+			}
+		}
+
+		for name, conf := range c.TLS.Stores {
+			if _, exists := configuration.TLS.Stores[name]; exists {
+				logger.Warnf("TLS store %v already configured, skipping", name)
+			} else {
+				if configuration.TLS.Stores == nil {
+					configuration.TLS.Stores = map[string]tls.Store{}
+				}
+				configuration.TLS.Stores[name] = conf
+			}
+		}
+	}
+
+	if len(configTLSMaps) > 0 && configuration.TLS == nil {
+		configuration.TLS = &dynamic.TLSConfiguration{}
 	}
 
 	for conf := range configTLSMaps {
-		configuration.TLS = append(configuration.TLS, conf)
+		configuration.TLS.Certificates = append(configuration.TLS.Certificates, conf)
 	}
+
 	return configuration, nil
 }
 
 // CreateConfiguration creates a provider configuration from content using templating.
-func (p *Provider) CreateConfiguration(tmplContent string, funcMap template.FuncMap, templateObjects interface{}) (*config.Configuration, error) {
+func (p *Provider) CreateConfiguration(filename string, funcMap template.FuncMap, templateObjects interface{}) (*dynamic.Configuration, error) {
+	tmplContent, err := readFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("error reading configuration file: %s - %s", filename, err)
+	}
+
 	var defaultFuncMap = sprig.TxtFuncMap()
 	defaultFuncMap["normalize"] = provider.Normalize
 	defaultFuncMap["split"] = strings.Split
@@ -322,7 +346,7 @@ func (p *Provider) CreateConfiguration(tmplContent string, funcMap template.Func
 
 	tmpl := template.New(p.Filename).Funcs(defaultFuncMap)
 
-	_, err := tmpl.Parse(tmplContent)
+	_, err = tmpl.Parse(tmplContent)
 	if err != nil {
 		return nil, err
 	}
@@ -335,30 +359,69 @@ func (p *Provider) CreateConfiguration(tmplContent string, funcMap template.Func
 
 	var renderedTemplate = buffer.String()
 	if p.DebugLogGeneratedTemplate {
-		log.Debugf("Template content: %s", tmplContent)
-		log.Debugf("Rendering results: %s", renderedTemplate)
+		logger := log.WithoutContext().WithField(log.ProviderName, providerName)
+		logger.Debugf("Template content: %s", tmplContent)
+		logger.Debugf("Rendering results: %s", renderedTemplate)
 	}
-	return p.DecodeConfiguration(renderedTemplate)
+
+	return p.decodeConfiguration(filename, renderedTemplate)
 }
 
 // DecodeConfiguration Decodes a *types.Configuration from a content.
-func (p *Provider) DecodeConfiguration(content string) (*config.Configuration, error) {
-	configuration := &config.Configuration{
-		HTTP: &config.HTTPConfiguration{
-			Routers:     make(map[string]*config.Router),
-			Middlewares: make(map[string]*config.Middleware),
-			Services:    make(map[string]*config.Service),
-		},
-		TCP: &config.TCPConfiguration{
-			Routers:  make(map[string]*config.TCPRouter),
-			Services: make(map[string]*config.TCPService),
-		},
-		TLS:        make([]*tls.Configuration, 0),
-		TLSStores:  make(map[string]tls.Store),
-		TLSOptions: make(map[string]tls.TLS),
+func (p *Provider) DecodeConfiguration(filename string) (*dynamic.Configuration, error) {
+	content, err := readFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("error reading configuration file: %s - %s", filename, err)
 	}
-	if _, err := toml.Decode(content, configuration); err != nil {
-		return nil, err
+
+	return p.decodeConfiguration(filename, content)
+}
+
+func (p *Provider) decodeConfiguration(filePath string, content string) (*dynamic.Configuration, error) {
+	configuration := &dynamic.Configuration{
+		HTTP: &dynamic.HTTPConfiguration{
+			Routers:     make(map[string]*dynamic.Router),
+			Middlewares: make(map[string]*dynamic.Middleware),
+			Services:    make(map[string]*dynamic.Service),
+		},
+		TCP: &dynamic.TCPConfiguration{
+			Routers:  make(map[string]*dynamic.TCPRouter),
+			Services: make(map[string]*dynamic.TCPService),
+		},
+		TLS: &dynamic.TLSConfiguration{
+			Stores:  make(map[string]tls.Store),
+			Options: make(map[string]tls.Options),
+		},
 	}
+
+	switch strings.ToLower(filepath.Ext(filePath)) {
+	case ".toml":
+		_, err := toml.Decode(content, configuration)
+		if err != nil {
+			return nil, err
+		}
+
+	case ".yml", ".yaml":
+		var err error
+		err = yaml.Unmarshal([]byte(content), configuration)
+		if err != nil {
+			return nil, err
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported file extension: %s", filePath)
+	}
+
 	return configuration, nil
+}
+
+func readFile(filename string) (string, error) {
+	if len(filename) > 0 {
+		buf, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return "", err
+		}
+		return string(buf), nil
+	}
+	return "", fmt.Errorf("invalid filename: %s", filename)
 }

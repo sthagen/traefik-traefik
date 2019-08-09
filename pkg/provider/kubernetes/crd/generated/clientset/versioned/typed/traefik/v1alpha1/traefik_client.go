@@ -29,14 +29,15 @@ package v1alpha1
 import (
 	"github.com/containous/traefik/pkg/provider/kubernetes/crd/generated/clientset/versioned/scheme"
 	v1alpha1 "github.com/containous/traefik/pkg/provider/kubernetes/crd/traefik/v1alpha1"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
 
 type TraefikV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	IngressRoutesGetter
+	IngressRouteTCPsGetter
 	MiddlewaresGetter
+	TLSOptionsGetter
 }
 
 // TraefikV1alpha1Client is used to interact with features provided by the traefik.containo.us group.
@@ -48,8 +49,16 @@ func (c *TraefikV1alpha1Client) IngressRoutes(namespace string) IngressRouteInte
 	return newIngressRoutes(c, namespace)
 }
 
+func (c *TraefikV1alpha1Client) IngressRouteTCPs(namespace string) IngressRouteTCPInterface {
+	return newIngressRouteTCPs(c, namespace)
+}
+
 func (c *TraefikV1alpha1Client) Middlewares(namespace string) MiddlewareInterface {
 	return newMiddlewares(c, namespace)
+}
+
+func (c *TraefikV1alpha1Client) TLSOptions(namespace string) TLSOptionInterface {
+	return newTLSOptions(c, namespace)
 }
 
 // NewForConfig creates a new TraefikV1alpha1Client for the given config.
@@ -84,7 +93,7 @@ func setConfigDefaults(config *rest.Config) error {
 	gv := v1alpha1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
+	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

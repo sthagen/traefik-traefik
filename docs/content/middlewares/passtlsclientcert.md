@@ -23,7 +23,7 @@ kind: Middleware
 metadata:
   name: addprefix
 spec:
-  passtlsclientcert:
+  passTLSClientCert:
     pem: true
 ```
 
@@ -39,11 +39,20 @@ labels:
 - "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.pem=true"
 ```
 
-```toml tab="File"
+```toml tab="File (TOML)"
 # Pass the escaped pem in the `X-Forwarded-Tls-Client-Cert` header.
 [http.middlewares]
-  [http.middlewares.test-passtlsclientcert.passtlsclientcert]
+  [http.middlewares.test-passtlsclientcert.passTLSClientCert]
     pem = true
+```
+
+```yaml tab="File (YAML)"
+# Pass the escaped pem in the `X-Forwarded-Tls-Client-Cert` header.
+http:
+  middlewares:
+    test-passtlsclientcert:
+      passTLSClientCert:
+        pem: true
 ```
 
 ??? example "Pass the escaped pem in the `X-Forwarded-Tls-Client-Cert` header"
@@ -77,7 +86,7 @@ labels:
     metadata:
       name: test-passtlsclientcert
     spec:
-      passtlsclientcert:
+      passTLSClientCert:
         info:
           notAfter: true
           notBefore: true
@@ -121,16 +130,38 @@ labels:
     - "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.issuer.province=true"
     - "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.issuer.serialnumber=true"
     ```
-    
-    ```toml tab="File"
+        
+    ```json tab="Marathon"
+    "labels": {
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.notafter": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.notbefore": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.sans": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.subject.commonname": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.subject.country": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.subject.domaincomponent": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.subject.locality": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.subject.organization": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.subject.province": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.subject.serialnumber": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.issuer.commonname": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.issuer.country": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.issuer.domaincomponent": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.issuer.locality": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.issuer.organization": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.issuer.province": "true",
+      "traefik.http.middlewares.test-passtlsclientcert.passtlsclientcert.info.issuer.serialnumber": "true"
+    }
+    ```
+
+    ```toml tab="File (TOML)"
     # Pass all the available info in the `X-Forwarded-Tls-Client-Cert-Info` header
     [http.middlewares]
-      [http.middlewares.test-passtlsclientcert.passtlsclientcert]
-        [http.middlewares.test-passtlsclientcert.passtlsclientcert.info]
+      [http.middlewares.test-passtlsclientcert.passTLSClientCert]
+        [http.middlewares.test-passtlsclientcert.passTLSClientCert.info]
           notAfter = true
           notBefore = true
           sans = true
-          [http.middlewares.test-passtlsclientcert.passtlsclientcert.info.subject]
+          [http.middlewares.test-passtlsclientcert.passTLSClientCert.info.subject]
             country = true
             province = true
             locality = true
@@ -138,7 +169,7 @@ labels:
             commonName = true
             serialNumber = true
             domainComponent = true
-          [http.middlewares.test-passtlsclientcert.passtlsclientcert.info.issuer]
+          [http.middlewares.test-passtlsclientcert.passTLSClientCert.info.issuer]
             country = true
             province = true
             locality = true
@@ -146,6 +177,34 @@ labels:
             commonName = true
             serialNumber = true
             domainComponent = true
+    ```
+
+    ```yaml tab="File (YAML)"
+    # Pass all the available info in the `X-Forwarded-Tls-Client-Cert-Info` header
+    http:
+      middlewares:
+        test-passtlsclientcert:
+          passTLSClientCert:
+            info:
+              notAfter: true
+              notBefore: true
+              sans: true
+              subject:
+                country: true
+                province: true
+                locality: true
+                organization: true
+                commonName: true
+                serialNumber: true
+                domainComponent: true
+              issuer:
+                country: true
+                province: true
+                locality: true
+                organization: true
+                commonName: true
+                serialNumber: true
+                domainComponent: true
     ```
 
 ## Configuration Options
@@ -338,9 +397,9 @@ Subject="DC=org,DC=cheese,C=FR,C=US,ST=Cheese org state,ST=Cheese com state,L=TO
 
     If there are more than one certificate, they are separated by a `;`.
 
-#### `info.notafter`
+#### `info.notAfter`
 
-Set the `info.notafter` option to `true` to add the `Not After` information from the `Validity` part.
+Set the `info.notAfter` option to `true` to add the `Not After` information from the `Validity` part.
 
 The data are taken from the following certificate part:      
 
@@ -349,15 +408,15 @@ The data are taken from the following certificate part:
         Not After : Dec  5 11:10:16 2020 GMT            
 ```
 
-The escape `notafter` info part will be like:
+The escape `notAfter` info part will be like:
 
 ```text
 NA=1607166616
 ```
 
-#### `info.notbefore`
+#### `info.notBefore`
 
-Set the `info.notafter` option to `true` to add the `Not Before` information from the `Validity` part.
+Set the `info.notBefore` option to `true` to add the `Not Before` information from the `Validity` part.
 
 The data are taken from the following certificate part:
 
@@ -366,7 +425,7 @@ Validity
     Not Before: Dec  6 11:10:16 2018 GMT
 ```
 
-The escape `notafter` info part will be like:
+The escape `notBefore` info part will be like:
 
 ```text
 NB=1544094616
@@ -449,9 +508,9 @@ The escape organization info in the subject part will be like :
 O=Cheese,O=Cheese 2
 ```
 
-##### `info.subject.commonname`
+##### `info.subject.commonName`
 
-Set the `info.subject.commonname` option to true to add the `commonname` information into the subject.
+Set the `info.subject.commonName` option to true to add the `commonName` information into the subject.
   
 The data are taken from the subject part with the `CN` key.
 
@@ -461,9 +520,9 @@ The escape common name info in the subject part will be like :
 CN=*.cheese.com
 ```
 
-##### `info.subject.serialnumber`
+##### `info.subject.serialNumber`
 
-Set the `info.subject.serialnumber` option to true to add the `serialnumber` information into the subject.
+Set the `info.subject.serialNumber` option to true to add the `serialNumber` information into the subject.
   
 The data are taken from the subject part with the `SN` key.
 
@@ -473,9 +532,9 @@ The escape serial number info in the subject part will be like :
 SN=1234567890
 ```
 
-##### `info.subject.domaincomponent`
+##### `info.subject.domainComponent`
 
-Set the `info.subject.domaincomponent` option to true to add the `domaincomponent` information into the subject.
+Set the `info.subject.domainComponent` option to true to add the `domainComponent` information into the subject.
   
 The data are taken from the subject part with the `DC` key.
 
@@ -541,9 +600,9 @@ The escape organization info in the issuer part will be like :
 O=Cheese,O=Cheese 2
 ```
 
-##### `info.issuer.commonname`
+##### `info.issuer.commonName`
 
-Set the `info.issuer.commonname` option to true to add the `commonname` information into the issuer.
+Set the `info.issuer.commonName` option to true to add the `commonName` information into the issuer.
   
 The data are taken from the issuer part with the `CN` key.
 
@@ -553,9 +612,9 @@ The escape common name info in the issuer part will be like :
 CN=Simple Signing CA 2
 ```
 
-##### `info.issuer.serialnumber`
+##### `info.issuer.serialNumber`
 
-Set the `info.issuer.serialnumber` option to true to add the `serialnumber` information into the issuer.
+Set the `info.issuer.serialNumber` option to true to add the `serialNumber` information into the issuer.
   
 The data are taken from the issuer part with the `SN` key.
 
@@ -565,9 +624,9 @@ The escape serial number info in the issuer part will be like :
 SN=1234567890
 ```
 
-##### `info.issuer.domaincomponent`
+##### `info.issuer.domainComponent`
 
-Set the `info.issuer.domaincomponent` option to true to add the `domaincomponent` information into the issuer.
+Set the `info.issuer.domainComponent` option to true to add the `domainComponent` information into the issuer.
   
 The data are taken from the issuer part with the `DC` key.
 

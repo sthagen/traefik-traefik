@@ -15,10 +15,18 @@ Attach labels to your containers and let Traefik do the rest!
 ??? example "Configuring Docker & Deploying / Exposing Services"
 
     Enabling the docker provider
-
-    ```toml
+    
+    ```toml tab="File (TOML)"
     [providers.docker]
-    endpoint = "unix:///var/run/docker.sock"
+    ```
+    
+    ```yaml tab="File (YAML)"
+    providers:
+      docker: {}
+    ```
+    
+    ```bash tab="CLI"
+    --providers.docker=true
     ```
 
     Attaching labels to containers (in your docker compose file)
@@ -36,16 +44,31 @@ Attach labels to your containers and let Traefik do the rest!
 
     Enabling the docker provider (Swarm Mode)
 
-    ```toml
-    [docker]
-    # swarm classic (1.12-)
-    # endpoint = "tcp://127.0.0.1:2375"
-    # docker swarm mode (1.12+)
-    endpoint = "tcp://127.0.0.1:2377"
-    swarmMode = true
+    ```toml tab="File (TOML)"
+    [providers.docker]
+      # swarm classic (1.12-)
+      # endpoint = "tcp://127.0.0.1:2375"
+      # docker swarm mode (1.12+)
+      endpoint = "tcp://127.0.0.1:2377"
+      swarmMode = true
+    ```
+    
+    ```yaml tab="File (YAML)"
+    providers:
+      docker:
+        # swarm classic (1.12-)
+        # endpoint = "tcp://127.0.0.1:2375"
+        # docker swarm mode (1.12+)
+        endpoint: "tcp://127.0.0.1:2375"
+        swarmMode: true
+    ```
+    
+    ```bash tab="CLI"
+    --providers.docker.endpoint="tcp://127.0.0.1:2375"
+    --providers.docker.swarmMode=true
     ```
 
-    Attaching labels to containers (in your docker compose file)
+    Attach labels to services (not to containers) while in Swarm mode (in your docker compose file)
 
     ```yaml
     version: "3"
@@ -57,15 +80,32 @@ Attach labels to your containers and let Traefik do the rest!
     ```
 
     !!! important "Labels in Docker Swarm Mode"
-        If you use a compose file with the Swarm mode, labels should be defined in the `deploy` part of your service.
+        While in Swarm Mode, Traefik uses labels found on services, not on individual containers. Therefore, if you use a compose file with Swarm Mode, labels should be defined in the `deploy` part of your service.
         This behavior is only enabled for docker-compose version 3+ ([Compose file reference](https://docs.docker.com/compose/compose-file/#labels-1)).
 
 ## Provider Configuration Options
 
 !!! tip "Browse the Reference"
-    If you're in a hurry, maybe you'd rather go through the [static](../reference/static-configuration.md) and the [dynamic](../reference/dynamic-configuration/docker.md) configuration references.
+    If you're in a hurry, maybe you'd rather go through the [static](../reference/static-configuration/overview.md) and the [dynamic](../reference/dynamic-configuration/docker.md) configuration references.
 
 ### `endpoint`
+
+_Required, Default="unix:///var/run/docker.sock"_
+
+```toml tab="File (TOML)"
+[providers.docker]
+  endpoint = "unix:///var/run/docker.sock"
+```
+
+```yaml tab="File (YAML)"
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+```
+
+```bash tab="CLI"
+--providers.docker.endpoint="unix:///var/run/docker.sock"
+```
 
 Traefik requires access to the docker socket to get its dynamic configuration.
 
@@ -86,7 +126,7 @@ Traefik requires access to the docker socket to get its dynamic configuration.
         - [KubeCon EU 2018 Keynote, Running with Scissors, from Liz Rice](https://www.youtube.com/watch?v=ltrV-Qmh3oY)
         - [Don't expose the Docker socket (not even to a container)](https://www.lvh.io/posts/dont-expose-the-docker-socket-not-even-to-a-container.html)
         - [A thread on Stack Overflow about sharing the `/var/run/docker.sock` file](https://news.ycombinator.com/item?id=17983623)
-        - [To Dind or not to DinD](https://blog.loof.fr/2018/01/to-dind-or-not-do-dind.html)
+        - [To DinD or not to DinD](https://blog.loof.fr/2018/01/to-dind-or-not-do-dind.html)
 
 ??? tip "Security Compensation"
 
@@ -94,14 +134,10 @@ Traefik requires access to the docker socket to get its dynamic configuration.
     It allows different implementation levels of the [AAA (Authentication, Authorization, Accounting) concepts](https://en.wikipedia.org/wiki/AAA_(computer_security)), depending on your security assessment:
 
     - Authentication with Client Certificates as described in ["Protect the Docker daemon socket."](https://docs.docker.com/engine/security/https/)
-
     - Authorization with the [Docker Authorization Plugin Mechanism](https://docs.docker.com/engine/extend/plugins_authorization/)
-
     - Accounting at networking level, by exposing the socket only inside a Docker private network, only available for Traefik.
-
     - Accounting at container level, by exposing the socket on a another container than Traefik's.
       With Swarm mode, it allows scheduling of Traefik on worker nodes, with only the "socket exposer" container on the manager nodes.
-
     - Accounting at kernel level, by enforcing kernel calls with mechanisms like [SELinux](https://en.wikipedia.org/wiki/Security-Enhanced_Linux), to only allows an identified set of actions for Traefik's process (or the "socket exposer" process).
 
     ??? tip "Additional Resources"
@@ -133,26 +169,57 @@ Traefik requires access to the docker socket to get its dynamic configuration.
 
     We specify the docker.sock in traefik's configuration file.
 
-    ```toml
+    ```toml tab="File (TOML)"
+    [providers.docker]
+      endpoint = "unix:///var/run/docker.sock"
+      # ...
+    ```
+    
+    ```yaml tab="File (YAML)"
+    providers:
+      docker:
+        endpoint: "unix:///var/run/docker.sock"
+         # ...
+    ```
+    
+    ```bash tab="CLI"
+    --providers.docker.endpoint="unix:///var/run/docker.sock"
     # ...
-    [providers]
-       [providers.docker]
-          endpoint = "unix:///var/run/docker.sock"
     ```
 
-### `usebindportip`
+### `useBindPortIP`
 
 _Optional, Default=false_
 
-Traefik routes requests to the IP/Port of the matching container.
-When setting `usebindportip=true`, you tell Traefik to use the IP/Port attached to the container's _binding_ instead of its inner network IP/Port.
+```toml tab="File (TOML)"
+[providers.docker]
+  useBindPortIP = true
+  # ...
+```
 
-When used in conjunction with the `traefik.port` label (that tells Traefik to route requests to a specific port), Traefik tries to find a binding on port `traefik.port`.
-If it can't find such a binding, Traefik falls back on the internal network IP of the container, but still uses the `traefik.port` that is set in the label.
+```yaml tab="File (YAML)"
+providers:
+  docker:
+    useBindPortIP: true
+    # ...
+```
+
+```bash tab="CLI"
+--providers.docker.useBindPortIP=true
+# ...
+```
+
+Traefik routes requests to the IP/Port of the matching container.
+When setting `useBindPortIP=true`, you tell Traefik to use the IP/Port attached to the container's _binding_ instead of its inner network IP/Port.
+
+When used in conjunction with the `traefik.http.services.XXX.loadbalancer.server.port` label (that tells Traefik to route requests to a specific port),
+Traefik tries to find a binding on port `traefik.http.services.XXX.loadbalancer.server.port`.
+If it can't find such a binding, Traefik falls back on the internal network IP of the container,
+but still uses the `traefik.http.services.XXX.loadbalancer.server.port` that is set in the label.
 
 ??? example "Examples of `usebindportip` in different situations."
 
-    | traefik.port label | Container's binding                                | Routes to      |
+    | port label         | Container's binding                                | Routes to      |
     |--------------------|----------------------------------------------------|----------------|
     |          -         |           -                                        | IntIP:IntPort  |
     |          -         | ExtPort:IntPort                                    | IntIP:IntPort  |
@@ -169,12 +236,50 @@ If it can't find such a binding, Traefik falls back on the internal network IP o
 
 _Optional, Default=true_
 
+```toml tab="File (TOML)"
+[providers.docker]
+  exposedByDefault = false
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  docker:
+    exposedByDefault: false
+    # ...
+```
+
+```bash tab="CLI"
+--providers.docker.exposedByDefault=false
+# ...
+```
+
 Expose containers by default through Traefik.
 If set to false, containers that don't have a `traefik.enable=true` label will be ignored from the resulting routing configuration.
 
+See also [Restrict the Scope of Service Discovery](./overview.md#restrict-the-scope-of-service-discovery).
+
 ### `network`
 
-_Optional_
+_Optional, Default=empty_
+
+```toml tab="File (TOML)"
+[providers.docker]
+  network = "test"
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  docker:
+    network: test
+    # ...
+```
+
+```bash tab="CLI"
+--providers.docker.network=test
+# ...
+```
 
 Defines a default docker network to use for connections to all containers.
 
@@ -182,19 +287,53 @@ This option can be overridden on a container basis with the `traefik.docker.netw
 
 ### `defaultRule`
 
-_Optional, Default=Host(`{{ normalize .Name }}`)_
+_Optional, Default=```Host(`{{ normalize .Name }}`)```_
+
+```toml tab="File (TOML)"
+[providers.docker]
+  defaultRule = "Host(`{{ .Name }}.{{ index .Labels \"customLabel\"}}`)"
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  docker:
+    defaultRule: "Host(`{{ .Name }}.{{ index .Labels \"customLabel\"}}`)"
+    # ...
+```
+
+```bash tab="CLI"
+--providers.docker.defaultRule="Host(`{{ .Name }}.{{ index .Labels \"customLabel\"}}`)"
+# ...
+```
 
 For a given container if no routing rule was defined by a label, it is defined by this defaultRule instead.
 It must be a valid [Go template](https://golang.org/pkg/text/template/),
 augmented with the [sprig template functions](http://masterminds.github.io/sprig/).
-The container service name can be accessed as the Name identifier,
+The container service name can be accessed as the `Name` identifier,
 and the template has access to all the labels defined on this container.
-
-``defaultRule = "Host(`{{ .Name }}.{{ index .Labels \"customLabel\"}}`)"``
 
 ### `swarmMode`
 
 _Optional, Default=false_
+
+```toml tab="File (TOML)"
+[providers.docker]
+  swarmMode = true
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  docker:
+    swarmMode: true
+    # ...
+```
+
+```bash tab="CLI"
+--providers.docker.swarmMode=true
+# ...
+```
 
 Activates the Swarm Mode.
 
@@ -202,7 +341,87 @@ Activates the Swarm Mode.
 
 _Optional, Default=15_
 
+```toml tab="File (TOML)"
+[providers.docker]
+  swarmModeRefreshSeconds = "30s"
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  docker:
+    swarmModeRefreshSeconds: "30s"
+    # ...
+```
+
+```bash tab="CLI"
+--providers.docker.swarmModeRefreshSeconds=30s
+# ...
+```
+
 Defines the polling interval (in seconds) in Swarm Mode.
+
+### `constraints`
+
+_Optional, Default=""_
+
+```toml tab="File (TOML)"
+[providers.docker]
+  constraints = "Label(`a.label.name`, `foo`)"
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  docker:
+    constraints: "Label(`a.label.name`, `foo`)"
+    # ...
+```
+
+```bash tab="CLI"
+--providers.docker.constraints="Label(`a.label.name`, `foo`)"
+# ...
+```
+
+Constraints is an expression that Traefik matches against the container's labels to determine whether to create any route for that container.
+That is to say, if none of the container's labels match the expression, no route for the container is created.
+If the expression is empty, all detected containers are included.
+
+The expression syntax is based on the `Label("key", "value")`, and `LabelRegexp("key", "value")` functions, as well as the usual boolean logic, as shown in examples below.
+
+??? example "Constraints Expression Examples"
+
+    ```toml
+    # Includes only containers having a label with key `a.label.name` and value `foo`
+    constraints = "Label(`a.label.name`, `foo`)"
+    ```
+    
+    ```toml
+    # Excludes containers having any label with key `a.label.name` and value `foo`
+    constraints = "!Label(`a.label.name`, `value`)"
+    ```
+    
+    ```toml
+    # With logical AND.
+    constraints = "Label(`a.label.name`, `valueA`) && Label(`another.label.name`, `valueB`)"
+    ```
+    
+    ```toml
+    # With logical OR.
+    constraints = "Label(`a.label.name`, `valueA`) || Label(`another.label.name`, `valueB`)"
+    ```
+    
+    ```toml
+    # With logical AND and OR, with precedence set by parentheses.
+    constraints = "Label(`a.label.name`, `valueA`) && (Label(`another.label.name`, `valueB`) || Label(`yet.another.label.name`, `valueC`))"
+    ```
+    
+    ```toml
+    # Includes only containers having a label with key `a.label.name` and a value matching the `a.+` regular expression.
+    constraints = "LabelRegexp(`a.label.name`, `a.+`)"
+    ```
+
+See also [Restrict the Scope of Service Discovery](./overview.md#restrict-the-scope-of-service-discovery).
 
 ## Routing Configuration Options
 
@@ -221,7 +440,7 @@ Every [Router](../routing/routers/index.md) parameter can be updated this way.
 
 ### Services
 
-To update the configuration of the Service automatically attached to the container, add labels starting with `traefik.http.services.{name-of-your-choice}.`, followed by the option you want to change. For example, to change the load balancer method, you'd add the label `traefik.http.services.{name-of-your-choice}.loadbalancer.method=drr`.
+To update the configuration of the Service automatically attached to the container, add labels starting with `traefik.http.services.{name-of-your-choice}.`, followed by the option you want to change. For example, to change the passhostheader behavior, you'd add the label `traefik.http.services.{name-of-your-choice}.loadbalancer.passhostheader=false`.
 
 Every [Service](../routing/services/index.md) parameter can be updated this way.
 
@@ -236,13 +455,15 @@ You can declare pieces of middleware using labels starting with `traefik.http.mi
          my-container:
            # ...
            labels:
-             - traefik.http.middlewares.my-redirect.schemeredirect.scheme=https
-             - traefik.http.routers.middlewares=my-redirect
+             - traefik.http.middlewares.my-redirect.redirectscheme.scheme=https
+             - traefik.http.routers.my-container.middlewares=my-redirect
     ```
 
 !!! warning "Conflicts in Declaration"
 
     If you declare multiple middleware with the same name but with different parameters, the middleware fails to be declared.
+
+More information about available middlewares in the dedicated [middlewares section](../middlewares/overview.md).
 
 ### TCP
 
@@ -262,7 +483,7 @@ You can declare TCP Routers and/or Services using labels.
 
 !!! warning "TCP and HTTP"
 
-    If you declare a TCP Router/Service, it will prevent Traefik from automatically create an HTTP Router/Service (like it does by default if no TCP Router/Service is defined).
+    If you declare a TCP Router/Service, it will prevent Traefik from automatically creating an HTTP Router/Service (like it does by default if no TCP Router/Service is defined).
     You can declare both a TCP Router/Service and an HTTP Router/Service for the same container (but you have to do so manually).
 
 ### Specific Options
@@ -272,10 +493,6 @@ You can declare TCP Routers and/or Services using labels.
 You can tell Traefik to consider (or not) the container by setting `traefik.enable` to true or false.
 
 This option overrides the value of `exposedByDefault`.
-
-#### `traefik.tags`
-
-Sets the tags for [constraints filtering](./overview.md#constraints-configuration).
 
 #### `traefik.docker.network`
 

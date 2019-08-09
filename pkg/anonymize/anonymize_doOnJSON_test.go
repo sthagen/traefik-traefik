@@ -58,7 +58,7 @@ func Test_doOnJSON(t *testing.T) {
   "DNSProvider": "",
   "DelayDontCheckDNS": 0,
   "ACMELogging": false,
-  "TLSOptions": null
+  "Options": null
  },
  "DefaultEntryPoints": [
   "https",
@@ -81,7 +81,8 @@ func Test_doOnJSON(t *testing.T) {
  "Etcd": null,
  "Zookeeper": null,
  "Boltdb": null,
- "Kubernetes": null,
+ "KubernetesIngress": null,
+ "KubernetesCRD": null,
  "Mesos": null,
  "Eureka": null,
  "ECS": null,
@@ -141,7 +142,7 @@ func Test_doOnJSON(t *testing.T) {
   "DNSProvider": "",
   "DelayDontCheckDNS": 0,
   "ACMELogging": false,
-  "TLSOptions": null
+  "Options": null
  },
  "DefaultEntryPoints": [
   "https",
@@ -164,7 +165,8 @@ func Test_doOnJSON(t *testing.T) {
  "Etcd": null,
  "Zookeeper": null,
  "Boltdb": null,
- "Kubernetes": null,
+ "KubernetesIngress": null,
+ "KubernetesCRD": null,
  "Mesos": null,
  "Eureka": null,
  "ECS": null,

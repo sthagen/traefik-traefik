@@ -42,12 +42,22 @@ labels:
 - "traefik.http.middlewares.test-replacepathregex.replacepathregex.replacement=/bar/$1"
 ```
 
-```toml tab="File"
+```toml tab="File (TOML)"
 # Redirect with domain replacement
 [http.middlewares]
   [http.middlewares.test-replacepathregex.replacePathRegex]
     regex = "^/foo/(.*)"
     replacement = "/bar/$1"
+```
+
+```yaml tab="File (YAML)"
+# Redirect with domain replacement
+http:
+  middlewares:
+    test-replacepathregex:
+      replacePathRegex:
+        regex: "^/foo/(.*)"
+        replacement: "/bar/$1"
 ```
 
 ## Configuration Options
@@ -61,7 +71,7 @@ The ReplacePathRegex middleware will:
 
 ### `regex`
 
-The `Regex` option is the regular expression to match and capture the path from the request URL.
+The `regex` option is the regular expression to match and capture the path from the request URL.
 
 !!! warning
 

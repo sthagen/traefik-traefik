@@ -63,6 +63,7 @@ func createHTTPTransport(transportConfiguration *static.ServersTransport) (*http
 
 	if transportConfiguration.ForwardingTimeouts != nil {
 		transport.ResponseHeaderTimeout = time.Duration(transportConfiguration.ForwardingTimeouts.ResponseHeaderTimeout)
+		transport.IdleConnTimeout = time.Duration(transportConfiguration.ForwardingTimeouts.IdleConnTimeout)
 	}
 
 	if transportConfiguration.InsecureSkipVerify {
@@ -83,7 +84,7 @@ func createHTTPTransport(transportConfiguration *static.ServersTransport) (*http
 	return transport, nil
 }
 
-func createRootCACertPool(rootCAs traefiktls.FilesOrContents) *x509.CertPool {
+func createRootCACertPool(rootCAs []traefiktls.FileOrContent) *x509.CertPool {
 	roots := x509.NewCertPool()
 
 	for _, cert := range rootCAs {

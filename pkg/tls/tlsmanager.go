@@ -3,6 +3,7 @@ package tls
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -17,8 +18,8 @@ import (
 type Manager struct {
 	storesConfig  map[string]Store
 	stores        map[string]*CertificateStore
-	configs       map[string]TLS
-	certs         []*Configuration
+	configs       map[string]Options
+	certs         []*CertAndStores
 	TLSAlpnGetter func(string) (*tls.Certificate, error)
 	lock          sync.RWMutex
 }
@@ -29,7 +30,7 @@ func NewManager() *Manager {
 }
 
 // UpdateConfigs updates the TLS* configuration options
-func (m *Manager) UpdateConfigs(stores map[string]Store, configs map[string]TLS, certs []*Configuration) {
+func (m *Manager) UpdateConfigs(stores map[string]Store, configs map[string]Options, certs []*CertAndStores) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -39,11 +40,12 @@ func (m *Manager) UpdateConfigs(stores map[string]Store, configs map[string]TLS,
 
 	m.stores = make(map[string]*CertificateStore)
 	for storeName, storeConfig := range m.storesConfig {
-		var err error
-		m.stores[storeName], err = buildCertificateStore(storeConfig)
+		store, err := buildCertificateStore(storeConfig)
 		if err != nil {
-			log.Errorf("Error while creating certificate store %s", storeName)
+			log.Errorf("Error while creating certificate store %s: %v", storeName, err)
+			continue
 		}
+		m.stores[storeName] = store
 	}
 
 	storesCertificates := make(map[string]map[string]*tls.Certificate)
@@ -67,17 +69,27 @@ func (m *Manager) UpdateConfigs(stores map[string]Store, configs map[string]TLS,
 	}
 }
 
-// Get gets the tls configuration to use for a given store / configuration
-func (m *Manager) Get(storeName string, configName string) *tls.Config {
+// Get gets the TLS configuration to use for a given store / configuration
+func (m *Manager) Get(storeName string, configName string) (*tls.Config, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
+	var tlsConfig *tls.Config
+	var err error
+
+	config, ok := m.configs[configName]
+	if !ok {
+		err = fmt.Errorf("unknown TLS options: %s", configName)
+		tlsConfig = &tls.Config{}
+	}
+
 	store := m.getStore(storeName)
 
-	tlsConfig, err := buildTLSConfig(m.configs[configName])
-	if err != nil {
-		log.Error(err)
-		tlsConfig = &tls.Config{}
+	if err == nil {
+		tlsConfig, err = buildTLSConfig(config)
+		if err != nil {
+			tlsConfig = &tls.Config{}
+		}
 	}
 
 	tlsConfig.GetCertificate = func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -106,7 +118,8 @@ func (m *Manager) Get(storeName string, configName string) *tls.Config {
 		log.WithoutContext().Debugf("Serving default certificate for request: %q", domainToCheck)
 		return store.DefaultCertificate, nil
 	}
-	return tlsConfig
+
+	return tlsConfig, err
 }
 
 func (m *Manager) getStore(storeName string) *CertificateStore {
@@ -132,14 +145,14 @@ func buildCertificateStore(tlsStore Store) (*CertificateStore, error) {
 	if tlsStore.DefaultCertificate != nil {
 		cert, err := buildDefaultCertificate(tlsStore.DefaultCertificate)
 		if err != nil {
-			return nil, err
+			return certificateStore, err
 		}
 		certificateStore.DefaultCertificate = cert
 	} else {
-		log.Debug("No default certificate, generate one")
+		log.Debug("No default certificate, generating one")
 		cert, err := generate.DefaultCertificate()
 		if err != nil {
-			return nil, err
+			return certificateStore, err
 		}
 		certificateStore.DefaultCertificate = cert
 	}
@@ -147,29 +160,51 @@ func buildCertificateStore(tlsStore Store) (*CertificateStore, error) {
 }
 
 // creates a TLS config that allows terminating HTTPS for multiple domains using SNI
-func buildTLSConfig(tlsOption TLS) (*tls.Config, error) {
+func buildTLSConfig(tlsOption Options) (*tls.Config, error) {
 	conf := &tls.Config{}
 
 	// ensure http2 enabled
 	conf.NextProtos = []string{"h2", "http/1.1", tlsalpn01.ACMETLS1Protocol}
 
-	if len(tlsOption.ClientCA.Files) > 0 {
+	if len(tlsOption.ClientAuth.CAFiles) > 0 {
 		pool := x509.NewCertPool()
-		for _, caFile := range tlsOption.ClientCA.Files {
+		for _, caFile := range tlsOption.ClientAuth.CAFiles {
 			data, err := caFile.Read()
 			if err != nil {
 				return nil, err
 			}
 			ok := pool.AppendCertsFromPEM(data)
 			if !ok {
-				return nil, fmt.Errorf("invalid certificate(s) in %s", caFile)
+				if caFile.IsPath() {
+					return nil, fmt.Errorf("invalid certificate(s) in %s", caFile)
+				}
+				return nil, errors.New("invalid certificate(s) content")
 			}
 		}
 		conf.ClientCAs = pool
-		if tlsOption.ClientCA.Optional {
+		conf.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+
+	clientAuthType := tlsOption.ClientAuth.ClientAuthType
+	if len(clientAuthType) > 0 {
+		if conf.ClientCAs == nil && (clientAuthType == "VerifyClientCertIfGiven" ||
+			clientAuthType == "RequireAndVerifyClientCert") {
+			return nil, fmt.Errorf("invalid clientAuthType: %s, CAFiles is required", clientAuthType)
+		}
+
+		switch clientAuthType {
+		case "NoClientCert":
+			conf.ClientAuth = tls.NoClientCert
+		case "RequestClientCert":
+			conf.ClientAuth = tls.RequestClientCert
+		case "RequireAnyClientCert":
+			conf.ClientAuth = tls.RequireAnyClientCert
+		case "VerifyClientCertIfGiven":
 			conf.ClientAuth = tls.VerifyClientCertIfGiven
-		} else {
+		case "RequireAndVerifyClientCert":
 			conf.ClientAuth = tls.RequireAndVerifyClientCert
+		default:
+			return nil, fmt.Errorf("unknown client auth type %q", clientAuthType)
 		}
 	}
 

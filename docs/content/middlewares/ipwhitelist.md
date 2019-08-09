@@ -12,7 +12,7 @@ IPWhitelist accepts / refuses requests based on the client IP.
 ```yaml tab="Docker"
 # Accepts request from defined IP
 labels:
-- "traefik.http.middlewares.test-ipwhitelist.IPWhiteList.SourceRange=127.0.0.1/32, 192.168.1.7"
+- "traefik.http.middlewares.test-ipwhitelist.ipwhitelist.sourcerange=127.0.0.1/32, 192.168.1.7"
 ```
 
 ```yaml tab="Kubernetes"
@@ -29,21 +29,32 @@ spec:
 
 ```json tab="Marathon"
 "labels": {
-  "traefik.http.middlewares.test-ipwhitelist.IPWhiteList.SourceRange": "127.0.0.1/32,192.168.1.7"
+  "traefik.http.middlewares.test-ipwhitelist.ipwhitelist.sourcerange": "127.0.0.1/32,192.168.1.7"
 }
 ```
 
 ```yaml tab="Rancher"
 # Accepts request from defined IP
 labels:
-- "traefik.http.middlewares.test-ipwhitelist.IPWhiteList.SourceRange=127.0.0.1/32, 192.168.1.7"
+- "traefik.http.middlewares.test-ipwhitelist.ipwhitelist.sourcerange=127.0.0.1/32, 192.168.1.7"
 ```
 
-```toml tab="File"
+```toml tab="File (TOML)"
 # Accepts request from defined IP
 [http.middlewares]
   [http.middlewares.test-ipwhitelist.ipWhiteList]
     sourceRange = ["127.0.0.1/32", "192.168.1.7"]
+```
+
+```yaml tab="File (YAML)"
+# Accepts request from defined IP
+http:
+  middlewares:
+    test-ipwhitelist:
+      ipWhiteList:
+        sourceRange:
+        - "127.0.0.1/32"
+        - "192.168.1.7"
 ```
 
 ## Configuration Options
@@ -75,7 +86,7 @@ The `depth` option tells Traefik to use the `X-Forwarded-For` header and take th
     ```yaml tab="Docker"
     # Whitelisting Based on `X-Forwarded-For` with `depth=2`
     labels:
-        - "traefik.http.middlewares.testIPwhitelist.ipWhiteList.SourceRange=127.0.0.1/32, 192.168.1.7"
+        - "traefik.http.middlewares.testIPwhitelist.ipwhitelist.sourcerange=127.0.0.1/32, 192.168.1.7"
         - "traefik.http.middlewares.testIPwhitelist.ipwhitelist.ipstrategy.depth=2"
     ```
     
@@ -87,27 +98,47 @@ The `depth` option tells Traefik to use the `X-Forwarded-For` header and take th
       name: testIPwhitelist
     spec:
       ipWhiteList:
-        SourceRange:
+        sourceRange:
         - 127.0.0.1/32
         - 192.168.1.7
-        ipstrategy:
+        ipStrategy:
           depth: 2
     ```
     
     ```yaml tab="Rancher"
     # Whitelisting Based on `X-Forwarded-For` with `depth=2`
     labels:
-        - "traefik.http.middlewares.testIPwhitelist.ipWhiteList.SourceRange=127.0.0.1/32, 192.168.1.7"
+        - "traefik.http.middlewares.testIPwhitelist.ipwhitelist.sourcerange=127.0.0.1/32, 192.168.1.7"
         - "traefik.http.middlewares.testIPwhitelist.ipwhitelist.ipstrategy.depth=2"
     ```
     
-    ```toml tab="File"
+    ```json tab="Marathon"
+    "labels": {
+        "traefik.http.middlewares.testIPwhitelist.ipwhitelist.sourcerange": "127.0.0.1/32, 192.168.1.7",
+        "traefik.http.middlewares.testIPwhitelist.ipwhitelist.ipstrategy.depth": "2"
+    }
+    ```
+    
+    ```toml tab="File (TOML)"
     # Whitelisting Based on `X-Forwarded-For` with `depth=2`
     [http.middlewares]
       [http.middlewares.test-ipwhitelist.ipWhiteList]
         sourceRange = ["127.0.0.1/32", "192.168.1.7"]
         [http.middlewares.test-ipwhitelist.ipWhiteList.ipStrategy]
-            depth = 2
+          depth = 2
+    ```
+    
+    ```yaml tab="File (YAML)"
+    # Whitelisting Based on `X-Forwarded-For` with `depth=2`
+    http:
+      middlewares:
+        test-ipwhitelist:
+          ipWhiteList:
+            sourceRange:
+            - "127.0.0.1/32"
+            - "192.168.1.7"
+            ipStrategy:
+              depth: 2
     ```
 
 !!! note
@@ -135,7 +166,7 @@ The `depth` option tells Traefik to use the `X-Forwarded-For` header and take th
 ```yaml tab="Docker"
 # Exclude from `X-Forwarded-For`
 labels:
-    - "traefik.http.middlewares.test-ipwhitelist.ipwhitelist.ipstrategy.excludedIPs=127.0.0.1/32, 192.168.1.7"
+    - "traefik.http.middlewares.test-ipwhitelist.ipwhitelist.ipstrategy.excludedips=127.0.0.1/32, 192.168.1.7"
 ```
 
 ```yaml tab="Kubernetes"
@@ -146,7 +177,7 @@ metadata:
   name: test-ipwhitelist
 spec:
   ipWhiteList:
-    ipstrategy:
+    ipStrategy:
       excludedIPs:
       - 127.0.0.1/32
       - 192.168.1.7
@@ -155,13 +186,31 @@ spec:
 ```yaml tab="Rancher"
 # Exclude from `X-Forwarded-For`
 labels:
-    - "traefik.http.middlewares.test-ipwhitelist.ipwhitelist.ipstrategy.excludedIPs=127.0.0.1/32, 192.168.1.7"
+    - "traefik.http.middlewares.test-ipwhitelist.ipwhitelist.ipstrategy.excludedips=127.0.0.1/32, 192.168.1.7"
 ```
 
-```toml tab="File"
+```json tab="Marathon"
+"labels": {
+    "traefik.http.middlewares.test-ipwhitelist.ipwhitelist.ipstrategy.excludedips": "127.0.0.1/32, 192.168.1.7"
+}
+```
+
+```toml tab="File (TOML)"
 # Exclude from `X-Forwarded-For`
 [http.middlewares]
   [http.middlewares.test-ipwhitelist.ipWhiteList]
     [http.middlewares.test-ipwhitelist.ipWhiteList.ipStrategy]
       excludedIPs = ["127.0.0.1/32", "192.168.1.7"]
+```
+
+```yaml tab="File (YAML)"
+# Exclude from `X-Forwarded-For`
+http:
+  middlewares:
+    test-ipwhitelist:
+      ipWhiteList:
+        ipStrategy:
+          excludedIPs:
+          - "127.0.0.1/32"
+          - "192.168.1.7"
 ```

@@ -6,14 +6,14 @@ How the Magic Happens
 ![Configuration](../assets/img/static-dynamic-configuration.png)
 
 Configuration in Traefik can refer to two different things:
-   
+
 - The fully dynamic routing configuration (referred to as the _dynamic configuration_)
 - The startup configuration (referred to as the _static configuration_)
 
-Elements in the _static configuration_ set up connections to [providers](../../providers/overview/) and define the [entrypoints](../../routing/entrypoints/) Traefik will listen to (these elements don't change often).
+Elements in the _static configuration_ set up connections to [providers](../providers/overview.md) and define the [entrypoints](../routing/entrypoints.md) Traefik will listen to (these elements don't change often).
 
 The _dynamic configuration_ contains everything that defines how the requests are handled by your system.
-This configuration can change and is seamlessly hot-reloaded, without any request interuption or connection loss.    
+This configuration can change and is seamlessly hot-reloaded, without any request interruption or connection loss.    
 
 !!! warning "Incompatible Configuration"
     Please be aware that the old configurations for Traefik v1.X are NOT compatible with the v2.X config as of now.
@@ -24,7 +24,7 @@ This configuration can change and is seamlessly hot-reloaded, without any reques
 Traefik gets its _dynamic configuration_ from [providers](../providers/overview.md): whether an orchestrator, a service registry, or a plain old configuration file. Since this configuration is specific to your infrastructure choices, we invite you to refer to the [dedicated section of this documentation](../providers/overview.md).
 
 !!! Note 
-   
+
     In the [Quick Start example](../getting-started/quick-start.md), the dynamic configuration comes from docker in the form of labels attached to your containers.
     
 !!! Note
@@ -33,31 +33,28 @@ Traefik gets its _dynamic configuration_ from [providers](../providers/overview.
  
 ## The Static Configuration
 
-There are three different locations where you can define static configuration options in Traefik:
+There are three different, mutually exclusive, ways to define static configuration options in Traefik:
 
-- In a key-value store
-- In the command-line arguments
 - In a configuration file
+- In the command-line arguments
+- As environment variables
 
-If you don't provide a value for a given option, default values apply.
+These ways are evaluated in the order listed above.
 
-!!! important "Precedence Order"
-
-    The following precedence order applies for configuration options: key-value > command-line > configuration file.
+If no value was provided for a given option, a default value applies.
+Moreover, if an option has sub-options, and any of these sub-options is not specified, a default value will apply as well.
     
-    It means that arguments override configuration file, and key-value store overrides arguments.
-    
-!!! important "Default Values"
-
-    Some root options are enablers: they set default values for all their children. 
-    
-    For example, the `--providers.docker` option enables the docker provider.
-    Once positioned, this option sets (and resets) all the default values under the root `providers.docker`.
-    If you define child options using a lesser precedence configuration source, they will be overwritten by the default values.  
+For example, the `--providers.docker` option is enough by itself to enable the docker provider, even though sub-options like `--providers.docker.endpoint` exist.
+Once positioned, this option sets (and resets) all the default values of the sub-options of `--providers.docker`.
     
 ### Configuration File
 
-At startup, Traefik searches for a file named `traefik.toml` in `/etc/traefik/`, `$HOME/.traefik/`, and `.` (_the working directory_).
+At startup, Traefik searches for a file named `traefik.toml` (or `traefik.yml` or `traefik.yaml`) in:
+
+- `/etc/traefik/`
+- `$XDG_CONFIG_HOME/`
+- `$HOME/.config/`
+- `.` (_the working directory_).
 
 You can override this using the `configFile` argument.
 
@@ -67,16 +64,22 @@ traefik --configFile=foo/bar/myconfigfile.toml
 
 ### Arguments
 
-Use `traefik --help` to get the list of the available arguments.
+To get the list of all available arguments:
 
-### Key-Value Stores
+```bash
+traefik --help
 
-Traefik supports several Key-value stores:
+# or
 
-- [Consul](https://consul.io)
-- [etcd](https://coreos.com/etcd/)
-- [ZooKeeper](https://zookeeper.apache.org/)
-- [boltdb](https://github.com/boltdb/bolt)
+docker run traefik[:version] --help
+# ex: docker run traefik:2.0 --help
+```
+
+All available arguments can also be found [here](../reference/static-configuration/cli.md).
+
+### Environment Variables
+
+All available environment variables can be found [here](../reference/static-configuration/env.md)
 
 ## Available Configuration Options
 

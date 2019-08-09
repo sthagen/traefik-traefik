@@ -4,38 +4,31 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	fmtlog "log"
+	stdlog "log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff"
-	"github.com/containous/flaeg"
-	"github.com/containous/staert"
 	"github.com/containous/traefik/autogen/genstatic"
 	"github.com/containous/traefik/cmd"
 	"github.com/containous/traefik/cmd/healthcheck"
-	"github.com/containous/traefik/cmd/storeconfig"
 	cmdVersion "github.com/containous/traefik/cmd/version"
+	"github.com/containous/traefik/pkg/cli"
 	"github.com/containous/traefik/pkg/collector"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/containous/traefik/pkg/config/static"
-	"github.com/containous/traefik/pkg/job"
 	"github.com/containous/traefik/pkg/log"
+	"github.com/containous/traefik/pkg/provider/acme"
 	"github.com/containous/traefik/pkg/provider/aggregator"
-	"github.com/containous/traefik/pkg/provider/kubernetes/k8s"
 	"github.com/containous/traefik/pkg/safe"
 	"github.com/containous/traefik/pkg/server"
 	"github.com/containous/traefik/pkg/server/router"
 	traefiktls "github.com/containous/traefik/pkg/tls"
-	"github.com/containous/traefik/pkg/types"
 	"github.com/containous/traefik/pkg/version"
 	"github.com/coreos/go-systemd/daemon"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
-	"github.com/ogier/pflag"
 	"github.com/sirupsen/logrus"
 	"github.com/vulcand/oxy/roundrobin"
 )
@@ -48,153 +41,46 @@ func init() {
 	os.Setenv("GODEBUG", goDebug+"tls13=1")
 }
 
-// sliceOfStrings is the parser for []string
-type sliceOfStrings []string
-
-// String is the method to format the flag's value, part of the flag.Value interface.
-// The String method's output will be used in diagnostics.
-func (s *sliceOfStrings) String() string {
-	return strings.Join(*s, ",")
-}
-
-// Set is the method to set the flag value, part of the flag.Value interface.
-// Set's argument is a string to be parsed to set the flag.
-// It's a comma-separated list, so we split it.
-func (s *sliceOfStrings) Set(value string) error {
-	parts := strings.Split(value, ",")
-	if len(parts) == 0 {
-		return fmt.Errorf("bad []string format: %s", value)
-	}
-	for _, entrypoint := range parts {
-		*s = append(*s, entrypoint)
-	}
-	return nil
-}
-
-// Get return the []string
-func (s *sliceOfStrings) Get() interface{} {
-	return *s
-}
-
-// SetValue sets the []string with val
-func (s *sliceOfStrings) SetValue(val interface{}) {
-	*s = val.([]string)
-}
-
-// Type is type of the struct
-func (s *sliceOfStrings) Type() string {
-	return "sliceOfStrings"
-}
-
 func main() {
 	// traefik config inits
-	traefikConfiguration := cmd.NewTraefikConfiguration()
-	traefikPointersConfiguration := cmd.NewTraefikDefaultPointersConfiguration()
+	tConfig := cmd.NewTraefikConfiguration()
 
-	// traefik Command init
-	traefikCmd := &flaeg.Command{
+	loaders := []cli.ResourceLoader{&cli.FileLoader{}, &cli.FlagLoader{}, &cli.EnvLoader{}}
+
+	cmdTraefik := &cli.Command{
 		Name: "traefik",
 		Description: `Traefik is a modern HTTP reverse proxy and load balancer made to deploy microservices with ease.
 Complete documentation is available at https://traefik.io`,
-		Config:                traefikConfiguration,
-		DefaultPointersConfig: traefikPointersConfiguration,
-		Run: func() error {
-			return runCmd(&traefikConfiguration.Configuration, traefikConfiguration.ConfigFile)
+		Configuration: tConfig,
+		Resources:     loaders,
+		Run: func(_ []string) error {
+			return runCmd(&tConfig.Configuration)
 		},
 	}
 
-	// storeconfig Command init
-	storeConfigCmd := storeconfig.NewCmd(traefikConfiguration, traefikPointersConfiguration)
-
-	// init flaeg source
-	f := flaeg.New(traefikCmd, os.Args[1:])
-	// add custom parsers
-	f.AddParser(reflect.TypeOf(static.EntryPoints{}), &static.EntryPoints{})
-
-	f.AddParser(reflect.SliceOf(reflect.TypeOf("")), &sliceOfStrings{})
-	f.AddParser(reflect.TypeOf(traefiktls.FilesOrContents{}), &traefiktls.FilesOrContents{})
-	f.AddParser(reflect.TypeOf(types.Constraints{}), &types.Constraints{})
-	f.AddParser(reflect.TypeOf(k8s.Namespaces{}), &k8s.Namespaces{})
-	f.AddParser(reflect.TypeOf([]types.Domain{}), &types.Domains{})
-	f.AddParser(reflect.TypeOf(types.DNSResolvers{}), &types.DNSResolvers{})
-	f.AddParser(reflect.TypeOf(types.Buckets{}), &types.Buckets{})
-
-	f.AddParser(reflect.TypeOf(types.StatusCodes{}), &types.StatusCodes{})
-	f.AddParser(reflect.TypeOf(types.FieldNames{}), &types.FieldNames{})
-	f.AddParser(reflect.TypeOf(types.FieldHeaderNames{}), &types.FieldHeaderNames{})
-
-	// add commands
-	f.AddCommand(cmdVersion.NewCmd())
-	f.AddCommand(storeConfigCmd)
-	f.AddCommand(healthcheck.NewCmd(traefikConfiguration, traefikPointersConfiguration))
-
-	usedCmd, err := f.GetCommand()
+	err := cmdTraefik.AddCommand(healthcheck.NewCmd(&tConfig.Configuration, loaders))
 	if err != nil {
-		fmtlog.Println(err)
+		stdlog.Println(err)
 		os.Exit(1)
 	}
 
-	if _, err := f.Parse(usedCmd); err != nil {
-		if err == pflag.ErrHelp {
-			os.Exit(0)
-		}
-		fmtlog.Printf("Error parsing command: %s\n", err)
-		os.Exit(1)
-	}
-
-	// staert init
-	s := staert.NewStaert(traefikCmd)
-	// init TOML source
-	toml := staert.NewTomlSource("traefik", []string{traefikConfiguration.ConfigFile, "/etc/traefik/", "$HOME/.traefik/", "."})
-
-	// add sources to staert
-	s.AddSource(toml)
-	s.AddSource(f)
-	if _, err := s.LoadConfig(); err != nil {
-		fmtlog.Printf("Error reading TOML config file %s : %s\n", toml.ConfigFileUsed(), err)
-		os.Exit(1)
-	}
-
-	traefikConfiguration.ConfigFile = toml.ConfigFileUsed()
-
-	kv, err := storeconfig.CreateKvSource(traefikConfiguration)
+	err = cmdTraefik.AddCommand(cmdVersion.NewCmd())
 	if err != nil {
-		fmtlog.Printf("Error creating kv store: %s\n", err)
+		stdlog.Println(err)
 		os.Exit(1)
 	}
-	storeConfigCmd.Run = storeconfig.Run(kv, traefikConfiguration)
 
-	// if a KV Store is enable and no sub-command called in args
-	if kv != nil && usedCmd == traefikCmd {
-		s.AddSource(kv)
-		operation := func() error {
-			_, err := s.LoadConfig()
-			return err
-		}
-		notify := func(err error, time time.Duration) {
-			log.WithoutContext().Errorf("Load config error: %+v, retrying in %s", err, time)
-		}
-		err := backoff.RetryNotify(safe.OperationWithRecover(operation), job.NewBackOff(backoff.NewExponentialBackOff()), notify)
-		if err != nil {
-			fmtlog.Printf("Error loading configuration: %s\n", err)
-			os.Exit(1)
-		}
-	}
-
-	if err := s.Run(); err != nil {
-		fmtlog.Printf("Error running traefik: %s\n", err)
+	err = cli.Execute(cmdTraefik)
+	if err != nil {
+		stdlog.Println(err)
 		os.Exit(1)
 	}
 
 	os.Exit(0)
 }
 
-func runCmd(staticConfiguration *static.Configuration, configFile string) error {
+func runCmd(staticConfiguration *static.Configuration) error {
 	configureLogging(staticConfiguration)
-
-	if len(configFile) > 0 {
-		log.WithoutContext().Infof("Using TOML configuration file %s", configFile)
-	}
 
 	http.DefaultTransport.(*http.Transport).Proxy = http.ProxyFromEnvironment
 
@@ -202,8 +88,10 @@ func runCmd(staticConfiguration *static.Configuration, configFile string) error 
 		log.WithoutContext().Errorf("Could not set roundrobin default weight: %v", err)
 	}
 
-	staticConfiguration.SetEffectiveConfiguration(configFile)
-	staticConfiguration.ValidateConfiguration()
+	staticConfiguration.SetEffectiveConfiguration()
+	if err := staticConfiguration.ValidateConfiguration(); err != nil {
+		return err
+	}
 
 	log.WithoutContext().Infof("Traefik version %s built on %s", version.Version, version.BuildDate)
 
@@ -227,15 +115,9 @@ func runCmd(staticConfiguration *static.Configuration, configFile string) error 
 
 	providerAggregator := aggregator.NewProviderAggregator(*staticConfiguration.Providers)
 
-	acmeProvider, err := staticConfiguration.InitACMEProvider()
-	if err != nil {
-		log.WithoutContext().Errorf("Unable to initialize ACME provider: %v", err)
-	} else if acmeProvider != nil {
-		if err := providerAggregator.AddProvider(acmeProvider); err != nil {
-			log.WithoutContext().Errorf("Unable to add ACME provider to the providers list: %v", err)
-			acmeProvider = nil
-		}
-	}
+	tlsManager := traefiktls.NewManager()
+
+	acmeProviders := initACMEProvider(staticConfiguration, &providerAggregator, tlsManager)
 
 	serverEntryPointsTCP := make(server.TCPEntryPoints)
 	for entryPointName, config := range staticConfiguration.EntryPoints {
@@ -244,27 +126,31 @@ func runCmd(staticConfiguration *static.Configuration, configFile string) error 
 		if err != nil {
 			return fmt.Errorf("error while building entryPoint %s: %v", entryPointName, err)
 		}
-		serverEntryPointsTCP[entryPointName].RouteAppenderFactory = router.NewRouteAppenderFactory(*staticConfiguration, entryPointName, acmeProvider)
+		serverEntryPointsTCP[entryPointName].RouteAppenderFactory = router.NewRouteAppenderFactory(*staticConfiguration, entryPointName, acmeProviders)
 
-	}
-
-	tlsManager := traefiktls.NewManager()
-
-	if acmeProvider != nil {
-		acmeProvider.SetTLSManager(tlsManager)
-		if acmeProvider.TLSChallenge != nil &&
-			acmeProvider.HTTPChallenge == nil &&
-			acmeProvider.DNSChallenge == nil {
-			tlsManager.TLSAlpnGetter = acmeProvider.GetTLSALPNCertificate
-		}
 	}
 
 	svr := server.NewServer(*staticConfiguration, providerAggregator, serverEntryPointsTCP, tlsManager)
 
-	if acmeProvider != nil && acmeProvider.OnHostRule {
-		acmeProvider.SetConfigListenerChan(make(chan config.Configuration))
-		svr.AddListener(acmeProvider.ListenConfiguration)
+	resolverNames := map[string]struct{}{}
+
+	for _, p := range acmeProviders {
+		resolverNames[p.ResolverName] = struct{}{}
+		svr.AddListener(p.ListenConfiguration)
 	}
+
+	svr.AddListener(func(config dynamic.Configuration) {
+		for rtName, rt := range config.HTTP.Routers {
+			if rt.TLS == nil || rt.TLS.CertResolver == "" {
+				continue
+			}
+
+			if _, ok := resolverNames[rt.TLS.CertResolver]; !ok {
+				log.WithoutContext().Errorf("the router %s uses a non-existent resolver: %s", rtName, rt.TLS.CertResolver)
+			}
+		}
+	})
+
 	ctx := cmd.ContextWithSignal(context.Background())
 
 	if staticConfiguration.Ping != nil {
@@ -289,7 +175,11 @@ func runCmd(staticConfiguration *static.Configuration, configFile string) error 
 		safe.Go(func() {
 			tick := time.Tick(t)
 			for range tick {
-				_, errHealthCheck := healthcheck.Do(*staticConfiguration)
+				resp, errHealthCheck := healthcheck.Do(*staticConfiguration)
+				if resp != nil {
+					resp.Body.Close()
+				}
+
 				if staticConfiguration.Ping == nil || errHealthCheck == nil {
 					if ok, _ := daemon.SdNotify(false, "WATCHDOG=1"); !ok {
 						log.WithoutContext().Error("Fail to tick watchdog")
@@ -307,24 +197,53 @@ func runCmd(staticConfiguration *static.Configuration, configFile string) error 
 	return nil
 }
 
+// initACMEProvider creates an acme provider from the ACME part of globalConfiguration
+func initACMEProvider(c *static.Configuration, providerAggregator *aggregator.ProviderAggregator, tlsManager *traefiktls.Manager) []*acme.Provider {
+	challengeStore := acme.NewLocalChallengeStore()
+	localStores := map[string]*acme.LocalStore{}
+
+	var resolvers []*acme.Provider
+	for name, resolver := range c.CertificatesResolvers {
+		if resolver.ACME != nil {
+			if localStores[resolver.ACME.Storage] == nil {
+				localStores[resolver.ACME.Storage] = acme.NewLocalStore(resolver.ACME.Storage)
+			}
+
+			p := &acme.Provider{
+				Configuration:  resolver.ACME,
+				Store:          localStores[resolver.ACME.Storage],
+				ChallengeStore: challengeStore,
+				ResolverName:   name,
+			}
+
+			if err := providerAggregator.AddProvider(p); err != nil {
+				log.WithoutContext().Errorf("Unable to add ACME provider to the providers list: %v", err)
+				continue
+			}
+			p.SetTLSManager(tlsManager)
+			if p.TLSChallenge != nil {
+				tlsManager.TLSAlpnGetter = p.GetTLSALPNCertificate
+			}
+			p.SetConfigListenerChan(make(chan dynamic.Configuration))
+			resolvers = append(resolvers, p)
+		}
+	}
+	return resolvers
+}
+
 func configureLogging(staticConfiguration *static.Configuration) {
 	// configure default log flags
-	fmtlog.SetFlags(fmtlog.Lshortfile | fmtlog.LstdFlags)
+	stdlog.SetFlags(stdlog.Lshortfile | stdlog.LstdFlags)
 
 	// configure log level
 	// an explicitly defined log level always has precedence. if none is
 	// given and debug mode is disabled, the default is ERROR, and DEBUG
 	// otherwise.
-	var levelStr string
-	if staticConfiguration.Log != nil {
+	levelStr := "error"
+	if staticConfiguration.Log != nil && staticConfiguration.Log.Level != "" {
 		levelStr = strings.ToLower(staticConfiguration.Log.Level)
 	}
-	if levelStr == "" {
-		levelStr = "error"
-		if staticConfiguration.Global.Debug {
-			levelStr = "debug"
-		}
-	}
+
 	level, err := logrus.ParseLevel(levelStr)
 	if err != nil {
 		log.WithoutContext().Errorf("Error getting level: %v", err)
@@ -377,7 +296,7 @@ func checkNewVersion() {
 func stats(staticConfiguration *static.Configuration) {
 	if staticConfiguration.Global.SendAnonymousUsage == nil {
 		log.WithoutContext().Error(`
-You haven't specify the sendAnonymousUsage option, it will be enable by default.
+You haven't specified the sendAnonymousUsage option, it will be enabled by default.
 `)
 		sendAnonymousUsage := true
 		staticConfiguration.Global.SendAnonymousUsage = &sendAnonymousUsage

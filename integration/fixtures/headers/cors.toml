@@ -1,31 +1,42 @@
 [global]
-checkNewVersion = false
-sendAnonymousUsage = false
+  checkNewVersion = false
+  sendAnonymousUsage = false
 
 [log]
-level = "DEBUG"
+  level = "DEBUG"
 
 [entryPoints]
   [entryPoints.web]
     address = ":8000"
 
-[providers]
-   [providers.file]
+[providers.file]
+  filename = "{{ .SelfFilename }}"
+
+## dynamic configuration ##
 
 [http.routers]
   [http.routers.router1]
     rule = "Host(`test.localhost`)"
+    middlewares = ["cors"]
+    service = "service1"
+
+  [http.routers.router2]
+    rule = "Host(`test2.localhost`)"
+    middlewares = ["nocors"]
     service = "service1"
 
 [http.middlewares]
-  [http.middlewares.cors.Headers]
-    AccessControlAllowMethods= ["GET", "OPTIONS", "PUT"]
-    AccessControlAllowOrigin = "origin-list-or-null"
-    AccessControlMaxAge = 100
-    AddVaryHeader = true
+  [http.middlewares.cors.headers]
+    accessControlAllowMethods= ["GET", "OPTIONS", "PUT"]
+    accessControlAllowOrigin = "origin-list-or-null"
+    accessControlMaxAge = 100
+    addVaryHeader = true
+
+  [http.middlewares.nocors.Headers]
+    [http.middlewares.nocors.Headers.CustomResponseHeaders]
+      X-Custom-Response-Header = "True"
 
 [http.services]
-  [http.services.service1.loadbalancer]
-    [[http.services.service1.loadbalancer.servers]]
-      url = "http://172.17.0.2:80"
-      weight = 1
+  [http.services.service1.loadBalancer]
+    [[http.services.service1.loadBalancer.servers]]
+      url = "http://127.0.0.1:9000"

@@ -7,14 +7,15 @@ import (
 	"net"
 	"strings"
 
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
+	"github.com/containous/traefik/pkg/config/label"
 	"github.com/containous/traefik/pkg/log"
 	"github.com/containous/traefik/pkg/provider"
-	"github.com/containous/traefik/pkg/provider/label"
+	"github.com/containous/traefik/pkg/provider/constraints"
 )
 
-func (p *Provider) buildConfiguration(ctx context.Context, services []rancherData) *config.Configuration {
-	configurations := make(map[string]*config.Configuration)
+func (p *Provider) buildConfiguration(ctx context.Context, services []rancherData) *dynamic.Configuration {
+	configurations := make(map[string]*dynamic.Configuration)
 
 	for _, service := range services {
 		ctxService := log.With(ctx, log.Str("service", service.Name))
@@ -68,14 +69,13 @@ func (p *Provider) buildConfiguration(ctx context.Context, services []rancherDat
 	return provider.Merge(ctx, configurations)
 }
 
-func (p *Provider) buildTCPServiceConfiguration(ctx context.Context, service rancherData, configuration *config.TCPConfiguration) error {
+func (p *Provider) buildTCPServiceConfiguration(ctx context.Context, service rancherData, configuration *dynamic.TCPConfiguration) error {
 	serviceName := service.Name
 
 	if len(configuration.Services) == 0 {
-		configuration.Services = make(map[string]*config.TCPService)
-		lb := &config.TCPLoadBalancerService{}
-		lb.SetDefaults()
-		configuration.Services[serviceName] = &config.TCPService{
+		configuration.Services = make(map[string]*dynamic.TCPService)
+		lb := &dynamic.TCPLoadBalancerService{}
+		configuration.Services[serviceName] = &dynamic.TCPService{
 			LoadBalancer: lb,
 		}
 	}
@@ -90,15 +90,15 @@ func (p *Provider) buildTCPServiceConfiguration(ctx context.Context, service ran
 	return nil
 }
 
-func (p *Provider) buildServiceConfiguration(ctx context.Context, service rancherData, configuration *config.HTTPConfiguration) error {
+func (p *Provider) buildServiceConfiguration(ctx context.Context, service rancherData, configuration *dynamic.HTTPConfiguration) error {
 
 	serviceName := service.Name
 
 	if len(configuration.Services) == 0 {
-		configuration.Services = make(map[string]*config.Service)
-		lb := &config.LoadBalancerService{}
+		configuration.Services = make(map[string]*dynamic.Service)
+		lb := &dynamic.LoadBalancerService{}
 		lb.SetDefaults()
-		configuration.Services[serviceName] = &config.Service{
+		configuration.Services[serviceName] = &dynamic.Service{
 			LoadBalancer: lb,
 		}
 	}
@@ -121,10 +121,13 @@ func (p *Provider) keepService(ctx context.Context, service rancherData) bool {
 		return false
 	}
 
-	if ok, failingConstraint := p.MatchConstraints(service.ExtraConf.Tags); !ok {
-		if failingConstraint != nil {
-			logger.Debugf("service pruned by %q constraint", failingConstraint.String())
-		}
+	matches, err := constraints.Match(service.Labels, p.Constraints)
+	if err != nil {
+		logger.Errorf("Error matching constraints expression: %v", err)
+		return false
+	}
+	if !matches {
+		logger.Debugf("Service pruned by constraint expression: %q", p.Constraints)
 		return false
 	}
 
@@ -142,7 +145,7 @@ func (p *Provider) keepService(ctx context.Context, service rancherData) bool {
 	return true
 }
 
-func (p *Provider) addServerTCP(ctx context.Context, service rancherData, loadBalancer *config.TCPLoadBalancerService) error {
+func (p *Provider) addServerTCP(ctx context.Context, service rancherData, loadBalancer *dynamic.TCPLoadBalancerService) error {
 	log.FromContext(ctx).Debugf("Trying to add servers for service  %s \n", service.Name)
 
 	serverPort := ""
@@ -154,10 +157,9 @@ func (p *Provider) addServerTCP(ctx context.Context, service rancherData, loadBa
 	port := getServicePort(service)
 
 	if len(loadBalancer.Servers) == 0 {
-		server := config.TCPServer{}
-		server.SetDefaults()
+		server := dynamic.TCPServer{}
 
-		loadBalancer.Servers = []config.TCPServer{server}
+		loadBalancer.Servers = []dynamic.TCPServer{server}
 	}
 
 	if serverPort != "" {
@@ -169,11 +171,10 @@ func (p *Provider) addServerTCP(ctx context.Context, service rancherData, loadBa
 		return errors.New("port is missing")
 	}
 
-	var servers []config.TCPServer
+	var servers []dynamic.TCPServer
 	for _, containerIP := range service.Containers {
-		servers = append(servers, config.TCPServer{
+		servers = append(servers, dynamic.TCPServer{
 			Address: net.JoinHostPort(containerIP, port),
-			Weight:  1,
 		})
 	}
 
@@ -182,17 +183,17 @@ func (p *Provider) addServerTCP(ctx context.Context, service rancherData, loadBa
 
 }
 
-func (p *Provider) addServers(ctx context.Context, service rancherData, loadBalancer *config.LoadBalancerService) error {
+func (p *Provider) addServers(ctx context.Context, service rancherData, loadBalancer *dynamic.LoadBalancerService) error {
 	log.FromContext(ctx).Debugf("Trying to add servers for service  %s \n", service.Name)
 
 	serverPort := getLBServerPort(loadBalancer)
 	port := getServicePort(service)
 
 	if len(loadBalancer.Servers) == 0 {
-		server := config.Server{}
+		server := dynamic.Server{}
 		server.SetDefaults()
 
-		loadBalancer.Servers = []config.Server{server}
+		loadBalancer.Servers = []dynamic.Server{server}
 	}
 
 	if serverPort != "" {
@@ -204,11 +205,10 @@ func (p *Provider) addServers(ctx context.Context, service rancherData, loadBala
 		return errors.New("port is missing")
 	}
 
-	var servers []config.Server
+	var servers []dynamic.Server
 	for _, containerIP := range service.Containers {
-		servers = append(servers, config.Server{
-			URL:    fmt.Sprintf("%s://%s", loadBalancer.Servers[0].Scheme, net.JoinHostPort(containerIP, port)),
-			Weight: 1,
+		servers = append(servers, dynamic.Server{
+			URL: fmt.Sprintf("%s://%s", loadBalancer.Servers[0].Scheme, net.JoinHostPort(containerIP, port)),
 		})
 	}
 
@@ -216,7 +216,7 @@ func (p *Provider) addServers(ctx context.Context, service rancherData, loadBala
 	return nil
 }
 
-func getLBServerPort(loadBalancer *config.LoadBalancerService) string {
+func getLBServerPort(loadBalancer *dynamic.LoadBalancerService) string {
 	if loadBalancer != nil && len(loadBalancer.Servers) > 0 {
 		return loadBalancer.Servers[0].Port
 	}

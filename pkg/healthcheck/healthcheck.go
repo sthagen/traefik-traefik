@@ -10,10 +10,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/containous/traefik/pkg/config/runtime"
 	"github.com/containous/traefik/pkg/log"
 	"github.com/containous/traefik/pkg/safe"
 	"github.com/go-kit/kit/metrics"
 	"github.com/vulcand/oxy/roundrobin"
+)
+
+const (
+	serverUp   = "UP"
+	serverDown = "DOWN"
 )
 
 var singleton *HealthCheck
@@ -220,4 +226,39 @@ func checkHealth(serverURL *url.URL, backend *BackendConfig) error {
 	}
 
 	return nil
+}
+
+// NewLBStatusUpdater returns a new LbStatusUpdater
+func NewLBStatusUpdater(bh BalancerHandler, svinfo *runtime.ServiceInfo) *LbStatusUpdater {
+	return &LbStatusUpdater{
+		BalancerHandler: bh,
+		serviceInfo:     svinfo,
+	}
+}
+
+// LbStatusUpdater wraps a BalancerHandler and a ServiceInfo,
+// so it can keep track of the status of a server in the ServiceInfo.
+type LbStatusUpdater struct {
+	BalancerHandler
+	serviceInfo *runtime.ServiceInfo // can be nil
+}
+
+// RemoveServer removes the given server from the BalancerHandler,
+// and updates the status of the server to "DOWN".
+func (lb *LbStatusUpdater) RemoveServer(u *url.URL) error {
+	err := lb.BalancerHandler.RemoveServer(u)
+	if err == nil && lb.serviceInfo != nil {
+		lb.serviceInfo.UpdateServerStatus(u.String(), serverDown)
+	}
+	return err
+}
+
+// UpsertServer adds the given server to the BalancerHandler,
+// and updates the status of the server to "UP".
+func (lb *LbStatusUpdater) UpsertServer(u *url.URL, options ...roundrobin.ServerOption) error {
+	err := lb.BalancerHandler.UpsertServer(u, options...)
+	if err == nil && lb.serviceInfo != nil {
+		lb.serviceInfo.UpdateServerStatus(u.String(), serverUp)
+	}
+	return err
 }

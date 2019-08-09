@@ -34,8 +34,12 @@ import (
 type Interface interface {
 	// IngressRoutes returns a IngressRouteInformer.
 	IngressRoutes() IngressRouteInformer
+	// IngressRouteTCPs returns a IngressRouteTCPInformer.
+	IngressRouteTCPs() IngressRouteTCPInformer
 	// Middlewares returns a MiddlewareInformer.
 	Middlewares() MiddlewareInformer
+	// TLSOptions returns a TLSOptionInformer.
+	TLSOptions() TLSOptionInformer
 }
 
 type version struct {
@@ -54,7 +58,17 @@ func (v *version) IngressRoutes() IngressRouteInformer {
 	return &ingressRouteInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
+// IngressRouteTCPs returns a IngressRouteTCPInformer.
+func (v *version) IngressRouteTCPs() IngressRouteTCPInformer {
+	return &ingressRouteTCPInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
 // Middlewares returns a MiddlewareInformer.
 func (v *version) Middlewares() MiddlewareInformer {
 	return &middlewareInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// TLSOptions returns a TLSOptionInformer.
+func (v *version) TLSOptions() TLSOptionInformer {
+	return &tLSOptionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

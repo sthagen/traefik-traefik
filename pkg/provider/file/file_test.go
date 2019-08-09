@@ -2,121 +2,60 @@ package file
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/containous/traefik/pkg/safe"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type ProvideTestCase struct {
-	desc               string
-	directoryContent   []string
-	fileContent        string
-	traefikFileContent string
-	expectedNumRouter  int
-	expectedNumService int
-	expectedNumTLSConf int
+	desc                  string
+	directoryPaths        []string
+	filePath              string
+	expectedNumRouter     int
+	expectedNumService    int
+	expectedNumTLSConf    int
+	expectedNumTLSOptions int
 }
 
-func TestProvideWithoutWatch(t *testing.T) {
-	for _, test := range getTestCases() {
-		t.Run(test.desc+" without watch", func(t *testing.T) {
-			provider, clean := createProvider(t, test, false)
-			defer clean()
-			configChan := make(chan config.Message)
+func TestTLSContent(t *testing.T) {
+	tempDir := createTempDir(t, "testdir")
+	defer os.RemoveAll(tempDir)
 
-			provider.DebugLogGeneratedTemplate = true
+	fileTLS, err := createTempFile("./fixtures/toml/tls_file.cert", tempDir)
+	require.NoError(t, err)
 
-			go func() {
-				err := provider.Provide(configChan, safe.NewPool(context.Background()))
-				assert.NoError(t, err)
-			}()
+	fileConfig, err := ioutil.TempFile(tempDir, "temp*.toml")
+	require.NoError(t, err)
 
-			timeout := time.After(time.Second)
-			select {
-			case conf := <-configChan:
-				assert.Len(t, conf.Configuration.HTTP.Services, test.expectedNumService)
-				assert.Len(t, conf.Configuration.HTTP.Routers, test.expectedNumRouter)
-				assert.Len(t, conf.Configuration.TLS, test.expectedNumTLSConf)
-			case <-timeout:
-				t.Errorf("timeout while waiting for config")
-			}
-		})
-	}
-}
+	content := `
+[[tls.certificates]]
+  certFile = "` + fileTLS.Name() + `"
+  keyFile = "` + fileTLS.Name() + `"
+`
 
-func TestProvideWithWatch(t *testing.T) {
-	for _, test := range getTestCases() {
-		t.Run(test.desc+" with watch", func(t *testing.T) {
-			provider, clean := createProvider(t, test, true)
-			defer clean()
-			configChan := make(chan config.Message)
+	_, err = fileConfig.Write([]byte(content))
+	require.NoError(t, err)
 
-			go func() {
-				err := provider.Provide(configChan, safe.NewPool(context.Background()))
-				assert.NoError(t, err)
-			}()
+	provider := &Provider{}
+	configuration, err := provider.loadFileConfig(fileConfig.Name(), true)
+	require.NoError(t, err)
 
-			timeout := time.After(time.Second)
-			select {
-			case conf := <-configChan:
-				assert.Len(t, conf.Configuration.HTTP.Services, 0)
-				assert.Len(t, conf.Configuration.HTTP.Routers, 0)
-				assert.Len(t, conf.Configuration.TLS, 0)
-			case <-timeout:
-				t.Errorf("timeout while waiting for config")
-			}
-
-			if len(test.fileContent) > 0 {
-				if err := ioutil.WriteFile(provider.Filename, []byte(test.fileContent), 0755); err != nil {
-					t.Error(err)
-				}
-			}
-
-			if len(test.traefikFileContent) > 0 {
-				if err := ioutil.WriteFile(provider.TraefikFile, []byte(test.traefikFileContent), 0755); err != nil {
-					t.Error(err)
-				}
-			}
-
-			if len(test.directoryContent) > 0 {
-				for _, fileContent := range test.directoryContent {
-					createRandomFile(t, provider.Directory, fileContent)
-				}
-			}
-
-			timeout = time.After(time.Second * 1)
-			var numUpdates, numServices, numRouters, numTLSConfs int
-			for {
-				select {
-				case conf := <-configChan:
-					numUpdates++
-					numServices = len(conf.Configuration.HTTP.Services)
-					numRouters = len(conf.Configuration.HTTP.Routers)
-					numTLSConfs = len(conf.Configuration.TLS)
-					t.Logf("received update #%d: services %d/%d, routers %d/%d, TLS configs %d/%d", numUpdates, numServices, test.expectedNumService, numRouters, test.expectedNumRouter, numTLSConfs, test.expectedNumTLSConf)
-
-					if numServices == test.expectedNumService && numRouters == test.expectedNumRouter && numTLSConfs == test.expectedNumTLSConf {
-						return
-					}
-				case <-timeout:
-					t.Fatal("timeout while waiting for config")
-				}
-			}
-		})
-	}
+	require.Equal(t, "CONTENT", configuration.TLS.Certificates[0].Certificate.CertFile.String())
+	require.Equal(t, "CONTENT", configuration.TLS.Certificates[0].Certificate.KeyFile.String())
 }
 
 func TestErrorWhenEmptyConfig(t *testing.T) {
 	provider := &Provider{}
-	configChan := make(chan config.Message)
+	configChan := make(chan dynamic.Message)
 	errorChan := make(chan struct{})
 	go func() {
 		err := provider.Provide(configChan, safe.NewPool(context.Background()))
@@ -134,89 +73,161 @@ func TestErrorWhenEmptyConfig(t *testing.T) {
 	}
 }
 
+func TestProvideWithoutWatch(t *testing.T) {
+	for _, test := range getTestCases() {
+		t.Run(test.desc+" without watch", func(t *testing.T) {
+			provider, clean := createProvider(t, test, false)
+			defer clean()
+			configChan := make(chan dynamic.Message)
+
+			provider.DebugLogGeneratedTemplate = true
+
+			go func() {
+				err := provider.Provide(configChan, safe.NewPool(context.Background()))
+				assert.NoError(t, err)
+			}()
+
+			timeout := time.After(time.Second)
+			select {
+			case conf := <-configChan:
+				require.NotNil(t, conf.Configuration.HTTP)
+				assert.Len(t, conf.Configuration.HTTP.Services, test.expectedNumService)
+				assert.Len(t, conf.Configuration.HTTP.Routers, test.expectedNumRouter)
+				require.NotNil(t, conf.Configuration.TLS)
+				assert.Len(t, conf.Configuration.TLS.Certificates, test.expectedNumTLSConf)
+				assert.Len(t, conf.Configuration.TLS.Options, test.expectedNumTLSOptions)
+			case <-timeout:
+				t.Errorf("timeout while waiting for config")
+			}
+		})
+	}
+}
+
+func TestProvideWithWatch(t *testing.T) {
+	for _, test := range getTestCases() {
+		t.Run(test.desc+" with watch", func(t *testing.T) {
+			provider, clean := createProvider(t, test, true)
+			defer clean()
+			configChan := make(chan dynamic.Message)
+
+			go func() {
+				err := provider.Provide(configChan, safe.NewPool(context.Background()))
+				assert.NoError(t, err)
+			}()
+
+			timeout := time.After(time.Second)
+			select {
+			case conf := <-configChan:
+				require.NotNil(t, conf.Configuration.HTTP)
+				assert.Len(t, conf.Configuration.HTTP.Services, 0)
+				assert.Len(t, conf.Configuration.HTTP.Routers, 0)
+				require.NotNil(t, conf.Configuration.TLS)
+				assert.Len(t, conf.Configuration.TLS.Certificates, 0)
+			case <-timeout:
+				t.Errorf("timeout while waiting for config")
+			}
+
+			if len(test.filePath) > 0 {
+				err := copyFile(test.filePath, provider.Filename)
+				require.NoError(t, err)
+			}
+
+			if len(test.directoryPaths) > 0 {
+				for i, filePath := range test.directoryPaths {
+					err := copyFile(filePath, filepath.Join(provider.Directory, strconv.Itoa(i)+filepath.Ext(filePath)))
+					require.NoError(t, err)
+				}
+			}
+
+			timeout = time.After(time.Second * 1)
+			var numUpdates, numServices, numRouters, numTLSConfs int
+			for {
+				select {
+				case conf := <-configChan:
+					numUpdates++
+					numServices = len(conf.Configuration.HTTP.Services)
+					numRouters = len(conf.Configuration.HTTP.Routers)
+					numTLSConfs = len(conf.Configuration.TLS.Certificates)
+					t.Logf("received update #%d: services %d/%d, routers %d/%d, TLS configs %d/%d", numUpdates, numServices, test.expectedNumService, numRouters, test.expectedNumRouter, numTLSConfs, test.expectedNumTLSConf)
+
+					if numServices == test.expectedNumService && numRouters == test.expectedNumRouter && numTLSConfs == test.expectedNumTLSConf {
+						return
+					}
+				case <-timeout:
+					t.Fatal("timeout while waiting for config")
+				}
+			}
+		})
+	}
+}
+
 func getTestCases() []ProvideTestCase {
 	return []ProvideTestCase{
 		{
 			desc:               "simple file",
-			fileContent:        createRoutersConfiguration(3) + createServicesConfiguration(6) + createTLS(5),
+			filePath:           "./fixtures/toml/simple_file_01.toml",
 			expectedNumRouter:  3,
 			expectedNumService: 6,
 			expectedNumTLSConf: 5,
 		},
 		{
-			desc:        "simple file and a traefik file",
-			fileContent: createRoutersConfiguration(4) + createServicesConfiguration(8) + createTLS(4),
-			traefikFileContent: `
-			debug=true
-`,
-			expectedNumRouter:  4,
-			expectedNumService: 8,
-			expectedNumTLSConf: 4,
+			desc:               "simple file yaml",
+			filePath:           "./fixtures/yaml/simple_file_01.yml",
+			expectedNumRouter:  3,
+			expectedNumService: 6,
+			expectedNumTLSConf: 5,
 		},
 		{
-			desc: "template file",
-			fileContent: `
-[http.routers]
-{{ range $i, $e := until 20 }}
-  [http.routers.router{{ $e }}]
-  service = "application"  
-{{ end }}
-`,
+			desc:              "template file",
+			filePath:          "./fixtures/toml/template_file.toml",
+			expectedNumRouter: 20,
+		},
+		{
+			desc:              "template file yaml",
+			filePath:          "./fixtures/yaml/template_file.yml",
 			expectedNumRouter: 20,
 		},
 		{
 			desc: "simple directory",
-			directoryContent: []string{
-				createRoutersConfiguration(2),
-				createServicesConfiguration(3),
-				createTLS(4),
+			directoryPaths: []string{
+				"./fixtures/toml/dir01_file01.toml",
+				"./fixtures/toml/dir01_file02.toml",
+				"./fixtures/toml/dir01_file03.toml",
 			},
-			expectedNumRouter:  2,
-			expectedNumService: 3,
-			expectedNumTLSConf: 4,
+			expectedNumRouter:     2,
+			expectedNumService:    3,
+			expectedNumTLSConf:    4,
+			expectedNumTLSOptions: 1,
+		},
+		{
+			desc: "simple directory yaml",
+			directoryPaths: []string{
+				"./fixtures/yaml/dir01_file01.yml",
+				"./fixtures/yaml/dir01_file02.yml",
+				"./fixtures/yaml/dir01_file03.yml",
+			},
+			expectedNumRouter:     2,
+			expectedNumService:    3,
+			expectedNumTLSConf:    4,
+			expectedNumTLSOptions: 1,
 		},
 		{
 			desc: "template in directory",
-			directoryContent: []string{
-				`
-[http.routers]
-{{ range $i, $e := until 20 }}
-  [http.routers.router{{ $e }}]
-  service = "application"  
-{{ end }}
-`,
-				`
-[http.services]
-{{ range $i, $e := until 20 }}
-  [http.services.application-{{ $e }}]
-	[[http.services.application-{{ $e }}.servers]]
-	url="http://127.0.0.1"
-	weight = 1
-{{ end }}
-`,
+			directoryPaths: []string{
+				"./fixtures/toml/template_in_directory_file01.toml",
+				"./fixtures/toml/template_in_directory_file02.toml",
 			},
 			expectedNumRouter:  20,
 			expectedNumService: 20,
 		},
 		{
-			desc: "simple traefik file",
-			traefikFileContent: `
-				debug=true
-				[providers.file]	
-				` + createRoutersConfiguration(2) + createServicesConfiguration(3) + createTLS(4),
-			expectedNumRouter:  2,
-			expectedNumService: 3,
-			expectedNumTLSConf: 4,
-		},
-		{
-			desc: "simple traefik file with templating",
-			traefikFileContent: `
-				temp="{{ getTag \"test\" }}"
-				[providers.file]	
-				` + createRoutersConfiguration(2) + createServicesConfiguration(3) + createTLS(4),
-			expectedNumRouter:  2,
-			expectedNumService: 3,
-			expectedNumTLSConf: 4,
+			desc: "template in directory yaml",
+			directoryPaths: []string{
+				"./fixtures/yaml/template_in_directory_file01.yml",
+				"./fixtures/yaml/template_in_directory_file02.yml",
+			},
+			expectedNumRouter:  20,
+			expectedNumService: 20,
 		},
 	}
 }
@@ -225,32 +236,33 @@ func createProvider(t *testing.T, test ProvideTestCase, watch bool) (*Provider, 
 	tempDir := createTempDir(t, "testdir")
 
 	provider := &Provider{}
-	provider.Watch = watch
+	provider.Watch = true
 
-	if len(test.directoryContent) > 0 {
+	if len(test.directoryPaths) > 0 {
 		if !watch {
-			for _, fileContent := range test.directoryContent {
-				createRandomFile(t, tempDir, fileContent)
+			for _, filePath := range test.directoryPaths {
+				var err error
+				_, err = createTempFile(filePath, tempDir)
+				require.NoError(t, err)
 			}
 		}
 		provider.Directory = tempDir
 	}
 
-	if len(test.fileContent) > 0 {
-		if watch {
-			test.fileContent = ""
-		}
-		filename := createRandomFile(t, tempDir, test.fileContent)
-		provider.Filename = filename.Name()
+	if len(test.filePath) > 0 {
 
-	}
-
-	if len(test.traefikFileContent) > 0 {
+		var file *os.File
 		if watch {
-			test.traefikFileContent = ""
+			var err error
+			file, err = ioutil.TempFile(tempDir, "temp*"+filepath.Ext(test.filePath))
+			require.NoError(t, err)
+		} else {
+			var err error
+			file, err = createTempFile(test.filePath, tempDir)
+			require.NoError(t, err)
 		}
-		filename := createRandomFile(t, tempDir, test.traefikFileContent)
-		provider.TraefikFile = filename.Name()
+
+		provider.Filename = file.Name()
 	}
 
 	return provider, func() {
@@ -258,39 +270,10 @@ func createProvider(t *testing.T, test ProvideTestCase, watch bool) (*Provider, 
 	}
 }
 
-// createRandomFile Helper
-func createRandomFile(t *testing.T, tempDir string, contents ...string) *os.File {
-	return createFile(t, tempDir, fmt.Sprintf("temp%d.toml", time.Now().UnixNano()), contents...)
-}
-
-// createFile Helper
-func createFile(t *testing.T, tempDir string, name string, contents ...string) *os.File {
-	t.Helper()
-	fileName := path.Join(tempDir, name)
-
-	tempFile, err := os.Create(fileName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, content := range contents {
-		_, err = tempFile.WriteString(content)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	err = tempFile.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return tempFile
-}
-
 // createTempDir Helper
 func createTempDir(t *testing.T, dir string) string {
 	t.Helper()
+
 	d, err := ioutil.TempDir("", dir)
 	if err != nil {
 		t.Fatal(err)
@@ -298,63 +281,36 @@ func createTempDir(t *testing.T, dir string) string {
 	return d
 }
 
-// createRoutersConfiguration Helper
-func createRoutersConfiguration(n int) string {
-	conf := "[http.routers]\n"
-	for i := 1; i <= n; i++ {
-		conf += fmt.Sprintf(` 
-[http.routers."router%[1]d"]
-	service = "application-%[1]d"
-`, i)
+func copyFile(srcPath, dstPath string) error {
+	dst, err := os.OpenFile(dstPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return err
 	}
-	return conf
+	defer dst.Close()
+
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	_, err = io.Copy(dst, src)
+	return err
 }
 
-// createServicesConfiguration Helper
-func createServicesConfiguration(n int) string {
-	conf := "[http.services]\n"
-	for i := 1; i <= n; i++ {
-		conf += fmt.Sprintf(`
-[http.services.application-%[1]d.loadbalancer]
-   [[http.services.application-%[1]d.loadbalancer.servers]]
-     url = "http://172.17.0.%[1]d:80"
-     weight = 1
-`, i)
+func createTempFile(srcPath, tempDir string) (*os.File, error) {
+	file, err := ioutil.TempFile(tempDir, "temp*"+filepath.Ext(srcPath))
+	if err != nil {
+		return nil, err
 	}
-	return conf
-}
+	defer file.Close()
 
-// createTLS Helper
-func createTLS(n int) string {
-	var conf string
-	for i := 1; i <= n; i++ {
-		conf += fmt.Sprintf(`[[TLS]]
-	EntryPoints = ["https"]
-	[TLS.Certificate]
-	CertFile = "integration/fixtures/https/snitest%[1]d.com.cert"
-	KeyFile = "integration/fixtures/https/snitest%[1]d.com.key"
-`, i)
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return nil, err
 	}
-	return conf
-}
+	defer src.Close()
 
-func TestTLSContent(t *testing.T) {
-	tempDir := createTempDir(t, "testdir")
-	defer os.RemoveAll(tempDir)
-
-	fileTLS := createRandomFile(t, tempDir, "CONTENT")
-	fileConfig := createRandomFile(t, tempDir, `
-[[tls]]
-entryPoints = ["https"]
-  [tls.certificate]
-    certFile = "`+fileTLS.Name()+`"
-    keyFile = "`+fileTLS.Name()+`"
-`)
-
-	provider := &Provider{}
-	configuration, err := provider.loadFileConfig(fileConfig.Name(), true)
-	require.NoError(t, err)
-
-	require.Equal(t, "CONTENT", configuration.TLS[0].Certificate.CertFile.String())
-	require.Equal(t, "CONTENT", configuration.TLS[0].Certificate.KeyFile.String())
+	_, err = io.Copy(file, src)
+	return file, err
 }

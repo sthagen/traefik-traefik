@@ -43,7 +43,7 @@ $ ls dist/
 traefik*
 ```
 
-The following targets can be executed outside Docker (we don't recommend that):
+The following targets can be executed outside Docker by setting the variable `PRE_TARGET` to an empty string (we don't recommend that):
 
 - `test-unit`
 - `test-integration`
@@ -61,24 +61,24 @@ PRE_TARGET= make test-unit
 You need `go` v1.12+.
 
 !!! tip "Source Directory"
- 
+
     It is recommended that you clone Traefik into the `~/go/src/github.com/containous/traefik` directory.
     This is the official golang workspace hierarchy that will allow dependencies to be properly resolved.
 
 !!! note "Environment"
 
     Set your `GOPATH` and `PATH` variable to be set to `~/go` via:
-    
+
     ```bash
     export GOPATH=~/go
     export PATH=$PATH:$GOPATH/bin
     ```
- 
+
     For convenience, add `GOPATH` and `PATH` to your `.bashrc` or `.bash_profile`
-    
+
     Verify your environment is setup properly by running `$ go env`.
     Depending on your OS and environment, you should see an output similar to:
-    
+
     ```bash
     GOARCH="amd64"
     GOBIN=""
@@ -123,7 +123,7 @@ If you happen to update the provider's templates (located in `/templates`), you 
 The [dep](https://github.com/golang/dep) command is not required for building;
 however, it is necessary if you need to update the dependencies (i.e., add, update, or remove third-party packages).
 
-You need [dep](https://github.com/golang/dep) >= 0.5.0.
+You need [dep](https://github.com/golang/dep) >= 0.5.4.
 
 If you want to add a dependency, use `dep ensure -add` to have [dep](https://github.com/golang/dep) put it into the vendor folder and update the dep manifest/lock files (`Gopkg.toml` and `Gopkg.lock`, respectively).
 

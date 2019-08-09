@@ -1,9 +1,9 @@
 [global]
-checkNewVersion = false
-sendAnonymousUsage = false
+  checkNewVersion = false
+  sendAnonymousUsage = false
 
 [log]
-level = "DEBUG"
+  level = "DEBUG"
 
 [entryPoints]
   [entryPoints.web]
@@ -13,18 +13,19 @@ level = "DEBUG"
 
 [api]
 
-[providers]
-   [providers.file]
+[providers.file]
+  filename = "{{ .SelfFilename }}"
+
+## dynamic configuration ##
 
 [http.routers]
   [http.routers.router1]
-    Service = "service1"
-    Rule = "Path(`/whoami`)"
+    service = "service1"
+    rule = "Path(`/whoami`)"
 
 [http.services]
   [http.services.service1]
-    [http.services.service1.LoadBalancer]
+    [http.services.service1.loadBalancer]
 
-      [[http.services.service1.LoadBalancer.Servers]]
-        URL = "http://{{.WhoamiIP}}"
-        Weight = 1
+      [[http.services.service1.loadBalancer.servers]]
+        url = "http://{{.WhoamiIP}}"

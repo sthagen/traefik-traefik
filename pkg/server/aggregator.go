@@ -1,26 +1,30 @@
 package server
 
 import (
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
+	"github.com/containous/traefik/pkg/log"
 	"github.com/containous/traefik/pkg/server/internal"
 	"github.com/containous/traefik/pkg/tls"
 )
 
-func mergeConfiguration(configurations config.Configurations) config.Configuration {
-	conf := config.Configuration{
-		HTTP: &config.HTTPConfiguration{
-			Routers:     make(map[string]*config.Router),
-			Middlewares: make(map[string]*config.Middleware),
-			Services:    make(map[string]*config.Service),
+func mergeConfiguration(configurations dynamic.Configurations) dynamic.Configuration {
+	conf := dynamic.Configuration{
+		HTTP: &dynamic.HTTPConfiguration{
+			Routers:     make(map[string]*dynamic.Router),
+			Middlewares: make(map[string]*dynamic.Middleware),
+			Services:    make(map[string]*dynamic.Service),
 		},
-		TCP: &config.TCPConfiguration{
-			Routers:  make(map[string]*config.TCPRouter),
-			Services: make(map[string]*config.TCPService),
+		TCP: &dynamic.TCPConfiguration{
+			Routers:  make(map[string]*dynamic.TCPRouter),
+			Services: make(map[string]*dynamic.TCPService),
 		},
-		TLSOptions: make(map[string]tls.TLS),
-		TLSStores:  make(map[string]tls.Store),
+		TLS: &dynamic.TLSConfiguration{
+			Stores:  make(map[string]tls.Store),
+			Options: make(map[string]tls.Options),
+		},
 	}
 
+	var defaultTLSOptionProviders []string
 	for provider, configuration := range configurations {
 		if configuration.HTTP != nil {
 			for routerName, router := range configuration.HTTP.Routers {
@@ -42,15 +46,33 @@ func mergeConfiguration(configurations config.Configurations) config.Configurati
 				conf.TCP.Services[internal.MakeQualifiedName(provider, serviceName)] = service
 			}
 		}
-		conf.TLS = append(conf.TLS, configuration.TLS...)
 
-		for key, store := range configuration.TLSStores {
-			conf.TLSStores[key] = store
-		}
+		if configuration.TLS != nil {
+			conf.TLS.Certificates = append(conf.TLS.Certificates, configuration.TLS.Certificates...)
 
-		for key, config := range configuration.TLSOptions {
-			conf.TLSOptions[key] = config
+			for key, store := range configuration.TLS.Stores {
+				conf.TLS.Stores[key] = store
+			}
+
+			for tlsOptionsName, options := range configuration.TLS.Options {
+				if tlsOptionsName != "default" {
+					tlsOptionsName = internal.MakeQualifiedName(provider, tlsOptionsName)
+				} else {
+					defaultTLSOptionProviders = append(defaultTLSOptionProviders, provider)
+				}
+
+				conf.TLS.Options[tlsOptionsName] = options
+			}
 		}
+	}
+
+	if len(defaultTLSOptionProviders) == 0 {
+		conf.TLS.Options["default"] = tls.Options{}
+	} else if len(defaultTLSOptionProviders) > 1 {
+		log.WithoutContext().Errorf("Default TLS Options defined multiple times in %v", defaultTLSOptionProviders)
+		// We do not set an empty tls.TLS{} as above so that we actually get a "cascading failure" later on,
+		// i.e. routers depending on this missing TLS option will fail to initialize as well.
+		delete(conf.TLS.Options, "default")
 	}
 
 	return conf

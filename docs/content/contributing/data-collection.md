@@ -9,22 +9,27 @@ Understanding how you use Traefik is very important to us: it helps us improve t
 For this very reason, the sendAnonymousUsage option is mandatory: we want you to take time to consider whether or not you wish to share anonymous data with us so we can benefit from your experience and use cases.
 
 !!! warning
-    During the alpha stage only, leaving this option unset will not prevent Traefik from running but will generate an error log indicating that it enables data collection by default.
+    During the beta stage only, leaving this option unset will not prevent Traefik from running but will generate an error log indicating that it enables data collection by default.
 
-??? example "Enabling Data Collection with TOML"
-
-    ```toml
-    [Global]
-        # Send anonymous usage data
-        sendAnonymousUsage = true
-    ```
-
-??? example "Enabling Data Collection with the CLI"
-
-    ```bash
-    ./traefik --sendAnonymousUsage=true
+!!! example "Enabling Data Collection"
+    
+    ```toml tab="File (TOML)"
+    [global]
+      # Send anonymous usage data
+      sendAnonymousUsage = true
     ```
     
+    ```yaml tab="File (YAML)"
+    global:
+      # Send anonymous usage data
+      sendAnonymousUsage: true
+    ```
+    
+    ```bash tab="CLI"
+    # Send anonymous usage data
+    --global.sendAnonymousUsage
+    ```
+
 ## Collected Data
 
 This feature comes from the public proposal [here](https://github.com/containous/traefik/issues/2369).
@@ -51,24 +56,23 @@ Once a day (the first call begins 10 minutes after the start of Traefik), we col
 
     ```toml
     [entryPoints]
-        [entryPoints.web]
-           address = ":80"
+      [entryPoints.web]
+         address = ":80"
     
     [api]
     
-    [Docker]
+    [providers.docker]
       endpoint = "tcp://10.10.10.10:2375"
-      domain = "foo.bir"
       exposedByDefault = true
       swarmMode = true
     
-      [Docker.TLS]
+      [providers.docker.TLS]
         ca = "dockerCA"
         cert = "dockerCert"
         key = "dockerKey"
         insecureSkipVerify = true
     
-    [ECS]
+    [providers.ecs]
       domain = "foo.bar"
       exposedByDefault = true
       clusters = ["foo-bar"]
@@ -81,24 +85,24 @@ Once a day (the first call begins 10 minutes after the start of Traefik), we col
 
     ```toml
     [entryPoints]
-        [entryPoints.web]
-           address = ":80"
+      [entryPoints.web]
+        address = ":80"
     
     [api]
     
-    [Docker]
+    [providers.docker]
       endpoint = "xxxx"
       domain = "xxxx"
       exposedByDefault = true
       swarmMode = true
     
-      [Docker.TLS]
+      [providers.docker.TLS]
         ca = "xxxx"
         cert = "xxxx"
         key = "xxxx"
         insecureSkipVerify = false
     
-    [ECS]
+    [providers.ecs]
       domain = "xxxx"
       exposedByDefault = true
       clusters = []

@@ -19,7 +19,7 @@ labels:
 - "traefik.http.routers.router1.rule=Host(`mydomain`)"
 - "traefik.http.middlewares.secured.chain.middlewares=https-only,known-ips,auth-users"
 - "traefik.http.middlewares.auth-users.basicauth.users=test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
-- "traefik.http.middlewares.https-only.schemeredirect.scheme=https"
+- "traefik.http.middlewares.https-only.redirectscheme.scheme=https"
 - "traefik.http.middlewares.known-ips.ipwhitelist.sourceRange=192.168.1.7,127.0.0.1/32"
 - "http.services.service1.loadbalancer.server.port=80"
 ```
@@ -69,7 +69,7 @@ kind: Middleware
 metadata:
   name: https-only
 spec:
-  schemeRedirect:
+  redirectScheme:
     scheme: https
 ---
 apiVersion: traefik.containo.us/v1alpha1
@@ -90,7 +90,7 @@ spec:
   "traefik.http.routers.router1.rule": "Host(`mydomain`)",
   "traefik.http.middlewares.secured.chain.middlewares": "https-only,known-ips,auth-users",
   "traefik.http.middlewares.auth-users.basicauth.users": "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/",
-  "traefik.http.middlewares.https-only.schemeredirect.scheme": "https",
+  "traefik.http.middlewares.https-only.redirectscheme.scheme": "https",
   "traefik.http.middlewares.known-ips.ipwhitelist.sourceRange": "192.168.1.7,127.0.0.1/32",
   "http.services.service1.loadbalancer.server.port": "80"
 }
@@ -103,36 +103,75 @@ labels:
 - "traefik.http.routers.router1.rule=Host(`mydomain`)"
 - "traefik.http.middlewares.secured.chain.middlewares=https-only,known-ips,auth-users"
 - "traefik.http.middlewares.auth-users.basicauth.users=test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
-- "traefik.http.middlewares.https-only.schemeredirect.scheme=https"
+- "traefik.http.middlewares.https-only.redirectscheme.scheme=https"
 - "traefik.http.middlewares.known-ips.ipwhitelist.sourceRange=192.168.1.7,127.0.0.1/32"
 - "http.services.service1.loadbalancer.server.port=80"
 ```
 
-```toml tab="File"
+```toml tab="File (TOML)"
 # ...    
 [http.routers]
-    [http.routers.router1]
-        service = "service1"
-        middlewares = ["secured"]
-        rule = "Host(`mydomain`)"
+  [http.routers.router1]
+    service = "service1"
+    middlewares = ["secured"]
+    rule = "Host(`mydomain`)"
 
 [http.middlewares]
-    [http.middlewares.secured.Chain]
-        middlewares = ["https-only", "known-ips", "auth-users"]
+  [http.middlewares.secured.chain]
+    middlewares = ["https-only", "known-ips", "auth-users"]
 
-    [http.middlewares.auth-users.BasicAuth]
-        users = ["test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"]
+  [http.middlewares.auth-users.basicAuth]
+    users = ["test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"]
 
-    [http.middlewares.https-only.SchemeRedirect]
-        scheme = "https"
+  [http.middlewares.https-only.redirectScheme]
+    scheme = "https"
 
-    [http.middlewares.known-ips.ipWhiteList]
-        sourceRange = ["192.168.1.7", "127.0.0.1/32"]
+  [http.middlewares.known-ips.ipWhiteList]
+    sourceRange = ["192.168.1.7", "127.0.0.1/32"]
 
 [http.services]
   [http.services.service1]
-    [http.services.service1.LoadBalancer]
-      [[http.services.service1.LoadBalancer.Servers]]
-        URL = "http://127.0.0.1:80"
-        Weight = 1
+    [http.services.service1.loadBalancer]
+      [[http.services.service1.loadBalancer.servers]]
+        url = "http://127.0.0.1:80"
+```
+
+```yaml tab="File (YAML)"
+# ...    
+http:
+  routers:
+    router1:
+      service: service1
+      middlewares:
+      - secured
+      rule: "Host(`mydomain`)"
+
+  middlewares:
+    secured:
+      chain:
+        middlewares:
+        - https-only
+        - known-ips
+        - auth-users
+
+    auth-users:
+      basicAuth:
+        users:
+        - "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
+
+    https-only:
+      redirectScheme:
+        scheme: https
+
+    known-ips:
+      ipWhiteList:
+        sourceRange:
+        - "192.168.1.7"
+        - "127.0.0.1/32"
+
+  services:
+    service1:
+      loadBalancer:
+        servers:
+        - url: "http://127.0.0.1:80"
 ```

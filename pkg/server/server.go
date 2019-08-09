@@ -9,7 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
+	"github.com/containous/traefik/pkg/config/runtime"
 	"github.com/containous/traefik/pkg/config/static"
 	"github.com/containous/traefik/pkg/log"
 	"github.com/containous/traefik/pkg/metrics"
@@ -20,29 +21,26 @@ import (
 	"github.com/containous/traefik/pkg/server/middleware"
 	"github.com/containous/traefik/pkg/tls"
 	"github.com/containous/traefik/pkg/tracing"
-	"github.com/containous/traefik/pkg/tracing/datadog"
-	"github.com/containous/traefik/pkg/tracing/instana"
 	"github.com/containous/traefik/pkg/tracing/jaeger"
-	"github.com/containous/traefik/pkg/tracing/zipkin"
 	"github.com/containous/traefik/pkg/types"
 )
 
 // Server is the reverse-proxy/load-balancer engine
 type Server struct {
 	entryPointsTCP             TCPEntryPoints
-	configurationChan          chan config.Message
-	configurationValidatedChan chan config.Message
+	configurationChan          chan dynamic.Message
+	configurationValidatedChan chan dynamic.Message
 	signals                    chan os.Signal
 	stopChan                   chan bool
 	currentConfigurations      safe.Safe
-	providerConfigUpdateMap    map[string]chan config.Message
+	providerConfigUpdateMap    map[string]chan dynamic.Message
 	accessLoggerMiddleware     *accesslog.Handler
 	tracer                     *tracing.Tracing
 	routinesPool               *safe.Pool
 	defaultRoundTripper        http.RoundTripper
 	metricsRegistry            metrics.Registry
 	provider                   provider.Provider
-	configurationListeners     []func(config.Configuration)
+	configurationListeners     []func(dynamic.Configuration)
 	requestDecorator           *requestdecorator.RequestDecorator
 	providersThrottleDuration  time.Duration
 	tlsManager                 *tls.Manager
@@ -50,23 +48,55 @@ type Server struct {
 
 // RouteAppenderFactory the route appender factory interface
 type RouteAppenderFactory interface {
-	NewAppender(ctx context.Context, middlewaresBuilder *middleware.Builder, currentConfigurations *safe.Safe) types.RouteAppender
+	NewAppender(ctx context.Context, middlewaresBuilder *middleware.Builder, runtimeConfiguration *runtime.Configuration) types.RouteAppender
 }
 
-func setupTracing(conf *static.Tracing) tracing.TrackingBackend {
-	switch conf.Backend {
-	case jaeger.Name:
-		return conf.Jaeger
-	case zipkin.Name:
-		return conf.Zipkin
-	case datadog.Name:
-		return conf.DataDog
-	case instana.Name:
-		return conf.Instana
-	default:
-		log.WithoutContext().Warnf("Could not initialize tracing: unknown tracer %q", conf.Backend)
-		return nil
+func setupTracing(conf *static.Tracing) tracing.Backend {
+	var backend tracing.Backend
+
+	if conf.Jaeger != nil {
+		backend = conf.Jaeger
 	}
+
+	if conf.Zipkin != nil {
+		if backend != nil {
+			log.WithoutContext().Error("Multiple tracing backend are not supported: cannot create Zipkin backend.")
+		} else {
+			backend = conf.Zipkin
+		}
+	}
+
+	if conf.DataDog != nil {
+		if backend != nil {
+			log.WithoutContext().Error("Multiple tracing backend are not supported: cannot create DataDog backend.")
+		} else {
+			backend = conf.DataDog
+		}
+	}
+
+	if conf.Instana != nil {
+		if backend != nil {
+			log.WithoutContext().Error("Multiple tracing backend are not supported: cannot create Instana backend.")
+		} else {
+			backend = conf.Instana
+		}
+	}
+
+	if conf.Haystack != nil {
+		if backend != nil {
+			log.WithoutContext().Error("Multiple tracing backend are not supported: cannot create Haystack backend.")
+		} else {
+			backend = conf.Haystack
+		}
+	}
+
+	if backend == nil {
+		log.WithoutContext().Debug("Could not initialize tracing, use Jaeger by default")
+		backend := &jaeger.Config{}
+		backend.SetDefaults()
+	}
+
+	return backend
 }
 
 // NewServer returns an initialized Server.
@@ -75,14 +105,14 @@ func NewServer(staticConfiguration static.Configuration, provider provider.Provi
 
 	server.provider = provider
 	server.entryPointsTCP = entryPoints
-	server.configurationChan = make(chan config.Message, 100)
-	server.configurationValidatedChan = make(chan config.Message, 100)
+	server.configurationChan = make(chan dynamic.Message, 100)
+	server.configurationValidatedChan = make(chan dynamic.Message, 100)
 	server.signals = make(chan os.Signal, 1)
 	server.stopChan = make(chan bool, 1)
 	server.configureSignals()
-	currentConfigurations := make(config.Configurations)
+	currentConfigurations := make(dynamic.Configurations)
 	server.currentConfigurations.Set(currentConfigurations)
-	server.providerConfigUpdateMap = make(map[string]chan config.Message)
+	server.providerConfigUpdateMap = make(map[string]chan dynamic.Message)
 	server.tlsManager = tlsManager
 
 	if staticConfiguration.Providers != nil {
@@ -100,11 +130,12 @@ func NewServer(staticConfiguration static.Configuration, provider provider.Provi
 	server.routinesPool = safe.NewPool(context.Background())
 
 	if staticConfiguration.Tracing != nil {
-		trackingBackend := setupTracing(staticConfiguration.Tracing)
-		var err error
-		server.tracer, err = tracing.NewTracing(staticConfiguration.Tracing.ServiceName, staticConfiguration.Tracing.SpanNameLimit, trackingBackend)
-		if err != nil {
-			log.WithoutContext().Warnf("Unable to create tracer: %v", err)
+		tracingBackend := setupTracing(staticConfiguration.Tracing)
+		if tracingBackend != nil {
+			server.tracer, err = tracing.NewTracing(staticConfiguration.Tracing.ServiceName, staticConfiguration.Tracing.SpanNameLimit, tracingBackend)
+			if err != nil {
+				log.WithoutContext().Warnf("Unable to create tracer: %v", err)
+			}
 		}
 	}
 
@@ -206,7 +237,7 @@ func (s *Server) Close() {
 
 func (s *Server) startTCPServers() {
 	// Use an empty configuration in order to initialize the default handlers with internal routes
-	routers := s.loadConfigurationTCP(config.Configurations{})
+	routers := s.loadConfigurationTCP(dynamic.Configurations{})
 	for entryPointName, router := range routers {
 		s.entryPointsTCP[entryPointName].switchRouter(router)
 	}
@@ -236,9 +267,9 @@ func (s *Server) listenProviders(stop chan bool) {
 }
 
 // AddListener adds a new listener function used when new configuration is provided
-func (s *Server) AddListener(listener func(config.Configuration)) {
+func (s *Server) AddListener(listener func(dynamic.Configuration)) {
 	if s.configurationListeners == nil {
-		s.configurationListeners = make([]func(config.Configuration), 0)
+		s.configurationListeners = make([]func(dynamic.Configuration), 0)
 	}
 	s.configurationListeners = append(s.configurationListeners, listener)
 }
@@ -276,11 +307,11 @@ func registerMetricClients(metricsConfig *types.Metrics) metrics.Registry {
 		}
 	}
 
-	if metricsConfig.Datadog != nil {
+	if metricsConfig.DataDog != nil {
 		ctx := log.With(context.Background(), log.Str(log.MetricsProviderName, "datadog"))
-		registries = append(registries, metrics.RegisterDatadog(ctx, metricsConfig.Datadog))
+		registries = append(registries, metrics.RegisterDatadog(ctx, metricsConfig.DataDog))
 		log.FromContext(ctx).Debugf("Configured DataDog metrics: pushing to %s once every %s",
-			metricsConfig.Datadog.Address, metricsConfig.Datadog.PushInterval)
+			metricsConfig.DataDog.Address, metricsConfig.DataDog.PushInterval)
 	}
 
 	if metricsConfig.StatsD != nil {

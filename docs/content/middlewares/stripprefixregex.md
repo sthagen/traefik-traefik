@@ -1,4 +1,4 @@
-# StripPrefix
+# StripPrefixRegex
 
 Removing Prefixes From the Path Before Forwarding the Request (Using a Regex)
 {: .subtitle }
@@ -22,7 +22,7 @@ kind: Middleware
 metadata:
   name: test-stripprefixregex
 spec:
-  StripPrefixRegex:
+  stripPrefixRegex:
     regex: "^/foo/(.*)"
 ```
 
@@ -38,11 +38,20 @@ labels:
 - "traefik.http.middlewares.test-stripprefixregex.stripprefixregex.regex=^/foo/(.*)",
 ```
 
-```toml tab="File"
+```toml tab="File (TOML)"
 # Replace the path by /foo
 [http.middlewares]
-  [http.middlewares.test-stripprefixregex.StripPrefixRegex]
-     regex: "^/foo/(.*)"
+  [http.middlewares.test-stripprefixregex.stripPrefixRegex]
+     regex = "^/foo/(.*)"
+```
+
+```yaml tab="File (YAML)"
+# Replace the path by /foo
+http:
+  middlewares:
+    test-stripprefixregex:
+      stripPrefixRegex:
+       regex: "^/foo/(.*)"
 ```
 
 ## Configuration Options
@@ -56,7 +65,7 @@ The StripPrefixRegex middleware will:
 
 !!! tip
     
-    Use a `StripPrefixRegex` middleware if your backend listens on the root path (`/`) but should be routeable on a specific prefix.
+    Use a `stripPrefixRegex` middleware if your backend listens on the root path (`/`) but should be routeable on a specific prefix.
 
 ### `regex`
 

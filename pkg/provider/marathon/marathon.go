@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/containous/flaeg/parse"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/containous/traefik/pkg/job"
 	"github.com/containous/traefik/pkg/log"
 	"github.com/containous/traefik/pkg/provider"
@@ -46,31 +45,42 @@ var _ provider.Provider = (*Provider)(nil)
 
 // Provider holds configuration of the provider.
 type Provider struct {
-	provider.Constrainer      `mapstructure:",squash" export:"true"`
-	Trace                     bool             `description:"Display additional provider logs." export:"true"`
-	Watch                     bool             `description:"Watch provider" export:"true"`
-	Endpoint                  string           `description:"Marathon server endpoint. You can also specify multiple endpoint for Marathon" export:"true"`
-	DefaultRule               string           `description:"Default rule"`
-	ExposedByDefault          bool             `description:"Expose Marathon apps by default" export:"true"`
-	DCOSToken                 string           `description:"DCOSToken for DCOS environment, This will override the Authorization header" export:"true"`
-	FilterMarathonConstraints bool             `description:"Enable use of Marathon constraints in constraint filtering" export:"true"`
-	TLS                       *types.ClientTLS `description:"Enable TLS support" export:"true"`
-	DialerTimeout             parse.Duration   `description:"Set a dialer timeout for Marathon" export:"true"`
-	ResponseHeaderTimeout     parse.Duration   `description:"Set a response header timeout for Marathon" export:"true"`
-	TLSHandshakeTimeout       parse.Duration   `description:"Set a TLS handhsake timeout for Marathon" export:"true"`
-	KeepAlive                 parse.Duration   `description:"Set a TCP Keep Alive time in seconds" export:"true"`
-	ForceTaskHostname         bool             `description:"Force to use the task's hostname." export:"true"`
-	Basic                     *Basic           `description:"Enable basic authentication" export:"true"`
-	RespectReadinessChecks    bool             `description:"Filter out tasks with non-successful readiness checks during deployments" export:"true"`
-	readyChecker              *readinessChecker
-	marathonClient            marathon.Marathon
-	defaultRuleTpl            *template.Template
+	Constraints            string           `description:"Constraints is an expression that Traefik matches against the application's labels to determine whether to create any route for that application." json:"constraints,omitempty" toml:"constraints,omitempty" yaml:"constraints,omitempty" export:"true"`
+	Trace                  bool             `description:"Display additional provider logs." json:"trace,omitempty" toml:"trace,omitempty" yaml:"trace,omitempty" export:"true"`
+	Watch                  bool             `description:"Watch provider." json:"watch,omitempty" toml:"watch,omitempty" yaml:"watch,omitempty" export:"true"`
+	Endpoint               string           `description:"Marathon server endpoint. You can also specify multiple endpoint for Marathon." json:"endpoint,omitempty" toml:"endpoint,omitempty" yaml:"endpoint,omitempty" export:"true"`
+	DefaultRule            string           `description:"Default rule." json:"defaultRule,omitempty" toml:"defaultRule,omitempty" yaml:"defaultRule,omitempty"`
+	ExposedByDefault       bool             `description:"Expose Marathon apps by default." json:"exposedByDefault,omitempty" toml:"exposedByDefault,omitempty" yaml:"exposedByDefault,omitempty" export:"true"`
+	DCOSToken              string           `description:"DCOSToken for DCOS environment, This will override the Authorization header." json:"dcosToken,omitempty" toml:"dcosToken,omitempty" yaml:"dcosToken,omitempty" export:"true"`
+	TLS                    *types.ClientTLS `description:"Enable TLS support." json:"tls,omitempty" toml:"tls,omitempty" yaml:"tls,omitempty" export:"true"`
+	DialerTimeout          types.Duration   `description:"Set a dialer timeout for Marathon." json:"dialerTimeout,omitempty" toml:"dialerTimeout,omitempty" yaml:"dialerTimeout,omitempty" export:"true"`
+	ResponseHeaderTimeout  types.Duration   `description:"Set a response header timeout for Marathon." json:"responseHeaderTimeout,omitempty" toml:"responseHeaderTimeout,omitempty" yaml:"responseHeaderTimeout,omitempty" export:"true"`
+	TLSHandshakeTimeout    types.Duration   `description:"Set a TLS handshake timeout for Marathon." json:"tlsHandshakeTimeout,omitempty" toml:"tlsHandshakeTimeout,omitempty" yaml:"tlsHandshakeTimeout,omitempty" export:"true"`
+	KeepAlive              types.Duration   `description:"Set a TCP Keep Alive time." json:"keepAlive,omitempty" toml:"keepAlive,omitempty" yaml:"keepAlive,omitempty" export:"true"`
+	ForceTaskHostname      bool             `description:"Force to use the task's hostname." json:"forceTaskHostname,omitempty" toml:"forceTaskHostname,omitempty" yaml:"forceTaskHostname,omitempty" export:"true"`
+	Basic                  *Basic           `description:"Enable basic authentication." json:"basic,omitempty" toml:"basic,omitempty" yaml:"basic,omitempty" export:"true"`
+	RespectReadinessChecks bool             `description:"Filter out tasks with non-successful readiness checks during deployments." json:"respectReadinessChecks,omitempty" toml:"respectReadinessChecks,omitempty" yaml:"respectReadinessChecks,omitempty" export:"true"`
+	readyChecker           *readinessChecker
+	marathonClient         marathon.Marathon
+	defaultRuleTpl         *template.Template
+}
+
+// SetDefaults sets the default values.
+func (p *Provider) SetDefaults() {
+	p.Watch = true
+	p.Endpoint = "http://127.0.0.1:8080"
+	p.ExposedByDefault = true
+	p.DialerTimeout = types.Duration(5 * time.Second)
+	p.ResponseHeaderTimeout = types.Duration(60 * time.Second)
+	p.TLSHandshakeTimeout = types.Duration(5 * time.Second)
+	p.KeepAlive = types.Duration(10 * time.Second)
+	p.DefaultRule = DefaultTemplateRule
 }
 
 // Basic holds basic authentication specific configurations
 type Basic struct {
-	HTTPBasicAuthUser string `description:"Basic authentication User"`
-	HTTPBasicPassword string `description:"Basic authentication Password"`
+	HTTPBasicAuthUser string `description:"Basic authentication User." json:"httpBasicAuthUser,omitempty" toml:"httpBasicAuthUser,omitempty" yaml:"httpBasicAuthUser,omitempty"`
+	HTTPBasicPassword string `description:"Basic authentication Password." json:"httpBasicPassword,omitempty" toml:"httpBasicPassword,omitempty" yaml:"httpBasicPassword,omitempty"`
 }
 
 // Init the provider
@@ -96,7 +106,7 @@ func (p *Provider) Init() error {
 
 // Provide allows the marathon provider to provide configurations to traefik
 // using the given configuration channel.
-func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.Pool) error {
+func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.Pool) error {
 	ctx := log.With(context.Background(), log.Str(log.ProviderName, "marathon"))
 	logger := log.FromContext(ctx)
 
@@ -161,7 +171,7 @@ func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.P
 
 						conf := p.getConfigurations(ctx)
 						if conf != nil {
-							configurationChan <- config.Message{
+							configurationChan <- dynamic.Message{
 								ProviderName:  "marathon",
 								Configuration: conf,
 							}
@@ -172,7 +182,7 @@ func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.P
 		}
 
 		configuration := p.getConfigurations(ctx)
-		configurationChan <- config.Message{
+		configurationChan <- dynamic.Message{
 			ProviderName:  "marathon",
 			Configuration: configuration,
 		}
@@ -189,7 +199,7 @@ func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.P
 	return nil
 }
 
-func (p *Provider) getConfigurations(ctx context.Context) *config.Configuration {
+func (p *Provider) getConfigurations(ctx context.Context) *dynamic.Configuration {
 	applications, err := p.getApplications()
 	if err != nil {
 		log.FromContext(ctx).Errorf("Failed to retrieve Marathon applications: %v", err)

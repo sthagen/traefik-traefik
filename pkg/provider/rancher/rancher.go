@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
 	"github.com/containous/traefik/pkg/job"
 	"github.com/containous/traefik/pkg/log"
 	"github.com/containous/traefik/pkg/provider"
@@ -40,15 +40,25 @@ var _ provider.Provider = (*Provider)(nil)
 
 // Provider holds configurations of the provider.
 type Provider struct {
-	provider.Constrainer      `mapstructure:",squash" export:"true"`
-	Watch                     bool   `description:"Watch provider" export:"true"`
-	DefaultRule               string `description:"Default rule"`
-	ExposedByDefault          bool   `description:"Expose containers by default" export:"true"`
-	EnableServiceHealthFilter bool
-	RefreshSeconds            int
+	Constraints               string `description:"Constraints is an expression that Traefik matches against the container's labels to determine whether to create any route for that container." json:"constraints,omitempty" toml:"constraints,omitempty" yaml:"constraints,omitempty" export:"true"`
+	Watch                     bool   `description:"Watch provider." json:"watch,omitempty" toml:"watch,omitempty" yaml:"watch,omitempty" export:"true"`
+	DefaultRule               string `description:"Default rule." json:"defaultRule,omitempty" toml:"defaultRule,omitempty" yaml:"defaultRule,omitempty"`
+	ExposedByDefault          bool   `description:"Expose containers by default." json:"exposedByDefault,omitempty" toml:"exposedByDefault,omitempty" yaml:"exposedByDefault,omitempty" export:"true"`
+	EnableServiceHealthFilter bool   `description:"Filter services with unhealthy states and inactive states." json:"enableServiceHealthFilter,omitempty" toml:"enableServiceHealthFilter,omitempty" yaml:"enableServiceHealthFilter,omitempty" export:"true"`
+	RefreshSeconds            int    `description:"Defines the polling interval in seconds." json:"refreshSeconds,omitempty" toml:"refreshSeconds,omitempty" yaml:"refreshSeconds,omitempty" export:"true"`
+	IntervalPoll              bool   `description:"Poll the Rancher metadata service every 'rancher.refreshseconds' (less accurate)." json:"intervalPoll,omitempty" toml:"intervalPoll,omitempty" yaml:"intervalPoll,omitempty"`
+	Prefix                    string `description:"Prefix used for accessing the Rancher metadata service." json:"prefix,omitempty" toml:"prefix,omitempty" yaml:"prefix,omitempty"`
 	defaultRuleTpl            *template.Template
-	IntervalPoll              bool   `description:"Poll the Rancher metadata service every 'rancher.refreshseconds' (less accurate)"`
-	Prefix                    string `description:"Prefix used for accessing the Rancher metadata service"`
+}
+
+// SetDefaults sets the default values.
+func (p *Provider) SetDefaults() {
+	p.Watch = true
+	p.ExposedByDefault = true
+	p.EnableServiceHealthFilter = true
+	p.RefreshSeconds = 15
+	p.DefaultRule = DefaultTemplateRule
+	p.Prefix = "latest"
 }
 
 type rancherData struct {
@@ -84,7 +94,7 @@ func (p *Provider) createClient(ctx context.Context) (rancher.Client, error) {
 }
 
 // Provide allows the rancher provider to provide configurations to traefik using the given configuration channel.
-func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.Pool) error {
+func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.Pool) error {
 	pool.GoCtx(func(routineCtx context.Context) {
 		ctxLog := log.With(routineCtx, log.Str(log.ProviderName, "rancher"))
 		logger := log.FromContext(ctxLog)
@@ -108,7 +118,7 @@ func (p *Provider) Provide(configurationChan chan<- config.Message, pool *safe.P
 				logger.Printf("Received Rancher data %+v", rancherData)
 
 				configuration := p.buildConfiguration(ctxLog, rancherData)
-				configurationChan <- config.Message{
+				configurationChan <- dynamic.Message{
 					ProviderName:  "rancher",
 					Configuration: configuration,
 				}

@@ -3,7 +3,7 @@
 What's Happening to the Requests?
 {: .subtitle }
 
-Let's zoom on Traefik's architecture and talk about the components that enable the routes to be created.
+Let's zoom in on Traefik's architecture and talk about the components that enable the routes to be created.
 
 First, when you start Traefik, you define [entrypoints](../entrypoints) (in their most basic forms, they are port numbers).
 Then, connected to these entrypoints, [routers](../routers) analyze the incoming requests to see if they match a set of [rules](../routers#rule).
@@ -14,7 +14,7 @@ If they do, the router might transform the request using pieces of [middleware](
 ## Clear Responsibilities
 
 - [_Providers_](../providers/overview.md) discover the services that live on your infrastructure (their IP, health, ...)
-- [_Entrypoints_](./entrypoints.md) listen for incomming traffic (ports, ...)
+- [_Entrypoints_](./entrypoints.md) listen for incoming traffic (ports, ...)
 - [_Routers_](./routers/index.md) analyse the requests (host, path, headers, SSL, ...)
 - [_Services_](./services/index.md) forward the request to your services (load balancing, ...)
 - [_Middlewares_](../middlewares/overview.md) may update the request or make decisions based on the request (authentication, rate limiting, headers, ...)
@@ -24,29 +24,92 @@ If they do, the router might transform the request using pieces of [middleware](
 Below is an example of a full configuration file for the [file provider](../providers/file.md) that forwards `http://domain/whoami/` requests to a service reachable on `http://private/whoami-service/`.
 In the process, Traefik will make sure that the user is authenticated (using the [BasicAuth middleware](../middlewares/basicauth.md)).
 
-```toml
+Static configuration:
+
+```toml tab="File (TOML)"
 [entryPoints]
-   [entryPoints.web]
-      address = ":8081" # Listen on port 8081 for incoming requests
+  [entryPoints.web]
+    # Listen on port 8081 for incoming requests
+    address = ":8081"
 
 [providers]
-   [providers.file] # Enable the file provider to define routers / middlewares / services in a file
+  # Enable the file provider to define routers / middlewares / services in a file
+  [providers.file]
+    filename = "dynamic_conf.toml"
+```
 
-[http] # http routing section
-    [http.routers]
-       [http.routers.to-whoami] # Define a connection between requests and services
-          rule = "Host(domain) && PathPrefix(/whoami/)"
-          middlewares = ["test-user"] # If the rule matches, applies the middleware
-          service = "whoami" # If the rule matches, forward to the whoami service (declared below)
+```yaml tab="File (YAML)"
+entryPoints:
+  web:
+    # Listen on port 8081 for incoming requests
+    address: :8081
 
-    [http.middlewares]
-       [http.middlewares.test-user.basicauth] # Define an authentication mechanism
-          users = ["test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"]
+providers:
+  # Enable the file provider to define routers / middlewares / services in a file
+  file:
+    filename: dynamic_conf.yml
+```
 
-    [http.services]
-       [http.services.whoami.loadbalancer] # Define how to reach an existing service on our infrastructure
-          [[http.services.whoami.loadbalancer.servers]]
-             url = "http://private/whoami-service"
+```bash tab="CLI"
+# Listen on port 8081 for incoming requests
+--entryPoints.web.address=:8081
+
+# Enable the file provider to define routers / middlewares / services in a file
+--providers.file.filename=dynamic_conf.toml
+```
+
+Dynamic configuration:
+
+```toml tab="TOML"
+# http routing section
+[http]
+  [http.routers]
+     # Define a connection between requests and services
+     [http.routers.to-whoami]
+      rule = "Host(`domain`) && PathPrefix(`/whoami/`)"
+      # If the rule matches, applies the middleware
+      middlewares = ["test-user"]
+      # If the rule matches, forward to the whoami service (declared below)
+      service = "whoami"
+
+  [http.middlewares]
+    # Define an authentication mechanism
+    [http.middlewares.test-user.basicAuth]
+      users = ["test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"]
+
+  [http.services]
+    # Define how to reach an existing service on our infrastructure
+    [http.services.whoami.loadBalancer]
+      [[http.services.whoami.loadBalancer.servers]]
+        url = "http://private/whoami-service"
+```
+
+```yaml tab="YAML"
+# http routing section
+http:
+  routers:
+    # Define a connection between requests and services
+    to-whoami:
+      rule: "Host(`domain`) && PathPrefix(`/whoami/`)"
+       # If the rule matches, applies the middleware
+      middlewares:
+      - test-user
+      # If the rule matches, forward to the whoami service (declared below)
+      service: whoami
+
+  middlewares:
+    # Define an authentication mechanism
+    test-user:
+      basicAuth:
+        users:
+        - test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/
+
+  services:
+    # Define how to reach an existing service on our infrastructure
+    whoami:
+      loadBalancer:
+        servers:
+        - url: http://private/whoami-service
 ```
 
 !!! note "The File Provider"
@@ -61,39 +124,114 @@ In the process, Traefik will make sure that the user is authenticated (using the
 
     ??? example "Adding a TCP route for TLS requests on whoami.traefik.io"
 
-        ```toml
+        Static configuration:
+        
+        ```toml tab="File (TOML)"
         [entryPoints]
-           [entryPoints.web]
-              address = ":8081" # Listen on port 8081 for incoming requests
+          [entryPoints.web]
+            # Listen on port 8081 for incoming requests
+            address = ":8081"
 
         [providers]
-           [providers.file] # Enable the file provider to define routers / middlewares / services in a file
+          # Enable the file provider to define routers / middlewares / services in a file
+          [providers.file]
+            filename = "dynamic_conf.toml"
+        ```
+        
+        ```yaml tab="File (YAML)"
+        entryPoints:
+          web:
+            # Listen on port 8081 for incoming requests
+            address: :8081
+        providers:
+          # Enable the file provider to define routers / middlewares / services in a file
+          file:
+            filename: dynamic_conf.yml
+        ```
+        
+        ```bash tab="CLI"
+        # Listen on port 8081 for incoming requests
+        --entryPoints.web.address=":8081"
+        
+        # Enable the file provider to define routers / middlewares / services in a file
+        --providers.file.filename=dynamic_conf.toml
+        ```
+        
+        Dynamic configuration:
 
-        [http] # http routing section
-            [http.routers]
-               [http.routers.to-whoami] # Define a connection between requests and services
-                  rule = "Host(`domain`) && PathPrefix(/whoami/)"
-                  middlewares = ["test-user"] # If the rule matches, applies the middleware
-                  service = "whoami" # If the rule matches, forward to the whoami service (declared below)
+        ```toml tab="TOML"
+        # http routing section
+        [http]
+          [http.routers]
+            # Define a connection between requests and services
+            [http.routers.to-whoami]
+              rule = "Host(`domain`) && PathPrefix(`/whoami/`)"
+              # If the rule matches, applies the middleware
+              middlewares = ["test-user"]
+              # If the rule matches, forward to the whoami service (declared below)
+              service = "whoami"
 
-            [http.middlewares]
-               [http.middlewares.test-user.basicauth] # Define an authentication mechanism
-                  users = ["test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"]
+          [http.middlewares]
+             # Define an authentication mechanism
+             [http.middlewares.test-user.basicAuth]
+               users = ["test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"]
 
-            [http.services]
-               [http.services.whoami.loadbalancer] # Define how to reach an existing service on our infrastructure
-                  [[http.services.whoami.loadbalancer.servers]]
-                     url = "http://private/whoami-service"
+          [http.services]
+             # Define how to reach an existing service on our infrastructure
+             [http.services.whoami.loadBalancer]
+               [[http.services.whoami.loadBalancer.servers]]
+                 url = "http://private/whoami-service"
 
-           [tcp]
-              [tcp.routers]
-                 [tcp.routers.to-whoami-tcp]
-                     rule = "HostSNI(`whoami-tcp.traefik.io`)"
-                     service = "whoami-tcp"
-                     [tcp.routers.to-whoami-tcp.tls]
+        [tcp]
+          [tcp.routers]
+            [tcp.routers.to-whoami-tcp]
+              rule = "HostSNI(`whoami-tcp.traefik.io`)"
+              service = "whoami-tcp"
+              [tcp.routers.to-whoami-tcp.tls]
 
-              [tcp.services]
-                 [tcp.services.whoami-tcp.loadbalancer]
-                    [[tcp.services.whoami-tcp.loadbalancer.servers]]
-                       address = "xx.xx.xx.xx:xx"
+          [tcp.services]
+            [tcp.services.whoami-tcp.loadBalancer]
+              [[tcp.services.whoami-tcp.loadBalancer.servers]]
+                address = "xx.xx.xx.xx:xx"
+        ```
+        
+        ```yaml tab="YAML"
+        # http routing section
+        http:
+
+          routers:
+            # Define a connection between requests and services
+            to-whoami:
+              rule: Host(`domain`) && PathPrefix(`/whoami/`)
+              # If the rule matches, applies the middleware
+              middlewares:
+              - test-user
+              # If the rule matches, forward to the whoami service (declared below)
+              service: whoami
+
+          middlewares:
+            # Define an authentication mechanism
+            test-user:
+              basicAuth:
+                users:
+                - test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/
+
+          services:
+            # Define how to reach an existing service on our infrastructure
+            whoami:
+              loadBalancer:
+                servers:
+                - url: http://private/whoami-service
+        tcp:
+
+          routers:
+            to-whoami-tcp:
+              service: whoami-tcp
+              rule: HostSNI(`whoami-tcp.traefik.io`)
+
+          services:
+            whoami-tcp:
+              loadBalancer:
+                servers:
+                - address: xx.xx.xx.xx:xx
         ```

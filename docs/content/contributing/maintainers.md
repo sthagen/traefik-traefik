@@ -16,6 +16,7 @@
 * Gérald Croës [@geraldcroes](https://github.com/geraldcroes)
 * Jean-Baptiste Doumenjou [@jbdoumenjou](https://github.com/jbdoumenjou)
 * Damien Duportal [@dduportal](https://github.com/dduportal)
+* Mathieu Lonjaret [@mpl](https://github.com/mpl)
 
 ## Contributions Daily Meeting
 
@@ -27,7 +28,7 @@
 * Modifying an issue or a pull request (labels, assignees, milestone) is only possible:
     * During the Contributions Daily Meeting
     * By an assigned maintainer
-    * In case of emergency, if a change proposal is approved by 2 other maintainers (on Slack, Discord, etc)
+    * In case of emergency, if a change proposal is approved by 2 other maintainers (on Slack, Discord, Discourse, etc)
 
 ## PR review process:
 

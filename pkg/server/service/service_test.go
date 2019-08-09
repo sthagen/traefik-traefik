@@ -4,9 +4,11 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
-	"github.com/containous/traefik/pkg/config"
+	"github.com/containous/traefik/pkg/config/dynamic"
+	"github.com/containous/traefik/pkg/config/runtime"
 	"github.com/containous/traefik/pkg/server/internal"
 	"github.com/containous/traefik/pkg/testhelpers"
 	"github.com/stretchr/testify/assert"
@@ -25,18 +27,17 @@ func TestGetLoadBalancer(t *testing.T) {
 	testCases := []struct {
 		desc        string
 		serviceName string
-		service     *config.LoadBalancerService
+		service     *dynamic.LoadBalancerService
 		fwd         http.Handler
 		expectError bool
 	}{
 		{
 			desc:        "Fails when provided an invalid URL",
 			serviceName: "test",
-			service: &config.LoadBalancerService{
-				Servers: []config.Server{
+			service: &dynamic.LoadBalancerService{
+				Servers: []dynamic.Server{
 					{
-						URL:    ":",
-						Weight: 0,
+						URL: ":",
 					},
 				},
 			},
@@ -46,15 +47,15 @@ func TestGetLoadBalancer(t *testing.T) {
 		{
 			desc:        "Succeeds when there are no servers",
 			serviceName: "test",
-			service:     &config.LoadBalancerService{},
+			service:     &dynamic.LoadBalancerService{},
 			fwd:         &MockForwarder{},
 			expectError: false,
 		},
 		{
 			desc:        "Succeeds when stickiness is set",
 			serviceName: "test",
-			service: &config.LoadBalancerService{
-				Stickiness: &config.Stickiness{},
+			service: &dynamic.LoadBalancerService{
+				Stickiness: &dynamic.Stickiness{},
 			},
 			fwd:         &MockForwarder{},
 			expectError: false,
@@ -79,7 +80,7 @@ func TestGetLoadBalancer(t *testing.T) {
 }
 
 func TestGetLoadBalancerServiceHandler(t *testing.T) {
-	sm := NewManager(nil, http.DefaultTransport)
+	sm := NewManager(nil, http.DefaultTransport, nil)
 
 	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-From", "first")
@@ -104,14 +105,16 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 	defer serverPassHostFalse.Close()
 
 	type ExpectedResult struct {
-		StatusCode int
-		XFrom      string
+		StatusCode     int
+		XFrom          string
+		SecureCookie   bool
+		HTTPOnlyCookie bool
 	}
 
 	testCases := []struct {
 		desc             string
 		serviceName      string
-		service          *config.LoadBalancerService
+		service          *dynamic.LoadBalancerService
 		responseModifier func(*http.Response) error
 
 		expected []ExpectedResult
@@ -119,18 +122,15 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 		{
 			desc:        "Load balances between the two servers",
 			serviceName: "test",
-			service: &config.LoadBalancerService{
-				Servers: []config.Server{
+			service: &dynamic.LoadBalancerService{
+				Servers: []dynamic.Server{
 					{
-						URL:    server1.URL,
-						Weight: 50,
+						URL: server1.URL,
 					},
 					{
-						URL:    server2.URL,
-						Weight: 50,
+						URL: server2.URL,
 					},
 				},
-				Method: "wrr",
 			},
 			expected: []ExpectedResult{
 				{
@@ -146,14 +146,12 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 		{
 			desc:        "StatusBadGateway when the server is not reachable",
 			serviceName: "test",
-			service: &config.LoadBalancerService{
-				Servers: []config.Server{
+			service: &dynamic.LoadBalancerService{
+				Servers: []dynamic.Server{
 					{
-						URL:    "http://foo",
-						Weight: 1,
+						URL: "http://foo",
 					},
 				},
-				Method: "wrr",
 			},
 			expected: []ExpectedResult{
 				{
@@ -164,9 +162,8 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 		{
 			desc:        "ServiceUnavailable when no servers are available",
 			serviceName: "test",
-			service: &config.LoadBalancerService{
-				Servers: []config.Server{},
-				Method:  "wrr",
+			service: &dynamic.LoadBalancerService{
+				Servers: []dynamic.Server{},
 			},
 			expected: []ExpectedResult{
 				{
@@ -177,19 +174,16 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 		{
 			desc:        "Always call the same server when stickiness is true",
 			serviceName: "test",
-			service: &config.LoadBalancerService{
-				Stickiness: &config.Stickiness{},
-				Servers: []config.Server{
+			service: &dynamic.LoadBalancerService{
+				Stickiness: &dynamic.Stickiness{},
+				Servers: []dynamic.Server{
 					{
-						URL:    server1.URL,
-						Weight: 1,
+						URL: server1.URL,
 					},
 					{
-						URL:    server2.URL,
-						Weight: 1,
+						URL: server2.URL,
 					},
 				},
-				Method: "wrr",
 			},
 			expected: []ExpectedResult{
 				{
@@ -203,18 +197,36 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 			},
 		},
 		{
-			desc:        "PassHost passes the host instead of the IP",
+			desc:        "Sticky Cookie's options set correctly",
 			serviceName: "test",
-			service: &config.LoadBalancerService{
-				Stickiness:     &config.Stickiness{},
-				PassHostHeader: true,
-				Servers: []config.Server{
+			service: &dynamic.LoadBalancerService{
+				Stickiness: &dynamic.Stickiness{HTTPOnlyCookie: true, SecureCookie: true},
+				Servers: []dynamic.Server{
 					{
-						URL:    serverPassHost.URL,
-						Weight: 1,
+						URL: server1.URL,
 					},
 				},
-				Method: "wrr",
+			},
+			expected: []ExpectedResult{
+				{
+					StatusCode:     http.StatusOK,
+					XFrom:          "first",
+					SecureCookie:   true,
+					HTTPOnlyCookie: true,
+				},
+			},
+		},
+		{
+			desc:        "PassHost passes the host instead of the IP",
+			serviceName: "test",
+			service: &dynamic.LoadBalancerService{
+				Stickiness:     &dynamic.Stickiness{},
+				PassHostHeader: true,
+				Servers: []dynamic.Server{
+					{
+						URL: serverPassHost.URL,
+					},
+				},
 			},
 			expected: []ExpectedResult{
 				{
@@ -226,15 +238,13 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 		{
 			desc:        "PassHost doesn't passe the host instead of the IP",
 			serviceName: "test",
-			service: &config.LoadBalancerService{
-				Stickiness: &config.Stickiness{},
-				Servers: []config.Server{
+			service: &dynamic.LoadBalancerService{
+				Stickiness: &dynamic.Stickiness{},
+				Servers: []dynamic.Server{
 					{
-						URL:    serverPassHostFalse.URL,
-						Weight: 1,
+						URL: serverPassHostFalse.URL,
 					},
 				},
-				Method: "wrr",
 			},
 			expected: []ExpectedResult{
 				{
@@ -263,8 +273,11 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 				assert.Equal(t, expected.StatusCode, recorder.Code)
 				assert.Equal(t, expected.XFrom, recorder.Header().Get("X-From"))
 
-				if len(recorder.Header().Get("Set-Cookie")) > 0 {
-					req.Header.Set("Cookie", recorder.Header().Get("Set-Cookie"))
+				cookieHeader := recorder.Header().Get("Set-Cookie")
+				if len(cookieHeader) > 0 {
+					req.Header.Set("Cookie", cookieHeader)
+					assert.Equal(t, expected.SecureCookie, strings.Contains(cookieHeader, "Secure"))
+					assert.Equal(t, expected.HTTPOnlyCookie, strings.Contains(cookieHeader, "HttpOnly"))
 				}
 			}
 		})
@@ -275,33 +288,39 @@ func TestManager_Build(t *testing.T) {
 	testCases := []struct {
 		desc         string
 		serviceName  string
-		configs      map[string]*config.Service
+		configs      map[string]*runtime.ServiceInfo
 		providerName string
 	}{
 		{
 			desc:        "Simple service name",
 			serviceName: "serviceName",
-			configs: map[string]*config.Service{
+			configs: map[string]*runtime.ServiceInfo{
 				"serviceName": {
-					LoadBalancer: &config.LoadBalancerService{Method: "wrr"},
+					Service: &dynamic.Service{
+						LoadBalancer: &dynamic.LoadBalancerService{},
+					},
 				},
 			},
 		},
 		{
 			desc:        "Service name with provider",
-			serviceName: "provider-1.serviceName",
-			configs: map[string]*config.Service{
-				"provider-1.serviceName": {
-					LoadBalancer: &config.LoadBalancerService{Method: "wrr"},
+			serviceName: "serviceName@provider-1",
+			configs: map[string]*runtime.ServiceInfo{
+				"serviceName@provider-1": {
+					Service: &dynamic.Service{
+						LoadBalancer: &dynamic.LoadBalancerService{},
+					},
 				},
 			},
 		},
 		{
 			desc:        "Service name with provider in context",
 			serviceName: "serviceName",
-			configs: map[string]*config.Service{
-				"provider-1.serviceName": {
-					LoadBalancer: &config.LoadBalancerService{Method: "wrr"},
+			configs: map[string]*runtime.ServiceInfo{
+				"serviceName@provider-1": {
+					Service: &dynamic.Service{
+						LoadBalancer: &dynamic.LoadBalancerService{},
+					},
 				},
 			},
 			providerName: "provider-1",
@@ -313,11 +332,11 @@ func TestManager_Build(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			manager := NewManager(test.configs, http.DefaultTransport)
+			manager := NewManager(test.configs, http.DefaultTransport, nil)
 
 			ctx := context.Background()
 			if len(test.providerName) > 0 {
-				ctx = internal.AddProviderInContext(ctx, test.providerName+".foobar")
+				ctx = internal.AddProviderInContext(ctx, "foobar@"+test.providerName)
 			}
 
 			_, err := manager.BuildHTTP(ctx, test.serviceName, nil)
