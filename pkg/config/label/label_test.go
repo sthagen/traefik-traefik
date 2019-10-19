@@ -170,7 +170,9 @@ func TestDecodeConfiguration(t *testing.T) {
 		"traefik.tcp.routers.Router1.tls.options":                                      "foo",
 		"traefik.tcp.routers.Router1.tls.passthrough":                                  "false",
 		"traefik.tcp.services.Service0.loadbalancer.server.Port":                       "42",
+		"traefik.tcp.services.Service0.loadbalancer.TerminationDelay":                  "42",
 		"traefik.tcp.services.Service1.loadbalancer.server.Port":                       "42",
+		"traefik.tcp.services.Service1.loadbalancer.TerminationDelay":                  "42",
 	}
 
 	configuration, err := DecodeConfiguration(labels)
@@ -206,21 +208,23 @@ func TestDecodeConfiguration(t *testing.T) {
 			},
 			Services: map[string]*dynamic.TCPService{
 				"Service0": {
-					LoadBalancer: &dynamic.TCPLoadBalancerService{
+					LoadBalancer: &dynamic.TCPServersLoadBalancer{
 						Servers: []dynamic.TCPServer{
 							{
 								Port: "42",
 							},
 						},
+						TerminationDelay: func(i int) *int { return &i }(42),
 					},
 				},
 				"Service1": {
-					LoadBalancer: &dynamic.TCPLoadBalancerService{
+					LoadBalancer: &dynamic.TCPServersLoadBalancer{
 						Servers: []dynamic.TCPServer{
 							{
 								Port: "42",
 							},
 						},
+						TerminationDelay: func(i int) *int { return &i }(42),
 					},
 				},
 			},
@@ -540,7 +544,7 @@ func TestDecodeConfiguration(t *testing.T) {
 								"name1": "foobar",
 							},
 						},
-						PassHostHeader: true,
+						PassHostHeader: func(v bool) *bool { return &v }(true),
 						ResponseForwarding: &dynamic.ResponseForwarding{
 							FlushInterval: "foobar",
 						},
@@ -566,7 +570,7 @@ func TestDecodeConfiguration(t *testing.T) {
 								"name1": "foobar",
 							},
 						},
-						PassHostHeader: true,
+						PassHostHeader: func(v bool) *bool { return &v }(true),
 						ResponseForwarding: &dynamic.ResponseForwarding{
 							FlushInterval: "foobar",
 						},
@@ -610,7 +614,7 @@ func TestEncodeConfiguration(t *testing.T) {
 			},
 			Services: map[string]*dynamic.TCPService{
 				"Service0": {
-					LoadBalancer: &dynamic.TCPLoadBalancerService{
+					LoadBalancer: &dynamic.TCPServersLoadBalancer{
 						Servers: []dynamic.TCPServer{
 							{
 								Port: "42",
@@ -619,7 +623,7 @@ func TestEncodeConfiguration(t *testing.T) {
 					},
 				},
 				"Service1": {
-					LoadBalancer: &dynamic.TCPLoadBalancerService{
+					LoadBalancer: &dynamic.TCPServersLoadBalancer{
 						Servers: []dynamic.TCPServer{
 							{
 								Port: "42",
@@ -942,7 +946,7 @@ func TestEncodeConfiguration(t *testing.T) {
 								"name1": "foobar",
 							},
 						},
-						PassHostHeader: true,
+						PassHostHeader: func(v bool) *bool { return &v }(true),
 						ResponseForwarding: &dynamic.ResponseForwarding{
 							FlushInterval: "foobar",
 						},
@@ -968,7 +972,7 @@ func TestEncodeConfiguration(t *testing.T) {
 								"name1": "foobar",
 							},
 						},
-						PassHostHeader: true,
+						PassHostHeader: func(v bool) *bool { return &v }(true),
 						ResponseForwarding: &dynamic.ResponseForwarding{
 							FlushInterval: "foobar",
 						},

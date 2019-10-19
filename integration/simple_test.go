@@ -2,7 +2,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -161,33 +160,6 @@ func (s *SimpleSuite) TestRequestAcceptGraceTimeout(c *check.C) {
 	}
 }
 
-func (s *SimpleSuite) TestApiOnSameEntryPoint(c *check.C) {
-	c.Skip("Waiting for new api handler implementation")
-	s.createComposeProject(c, "base")
-	s.composeProject.Start(c)
-
-	cmd, output := s.traefikCmd("--entryPoints.http.Address=:8000", "--api.entryPoint=http", "--log.level=DEBUG", "--providers.docker")
-	defer output(c)
-
-	err := cmd.Start()
-	c.Assert(err, checker.IsNil)
-	defer cmd.Process.Kill()
-
-	// TODO validate : run on 80
-	// Expected a 404 as we did not configure anything
-	err = try.GetRequest("http://127.0.0.1:8000/test", 1*time.Second, try.StatusCodeIs(http.StatusNotFound))
-	c.Assert(err, checker.IsNil)
-
-	err = try.GetRequest("http://127.0.0.1:8000/api/rawdata", 1*time.Second, try.StatusCodeIs(http.StatusOK))
-	c.Assert(err, checker.IsNil)
-
-	err = try.GetRequest("http://127.0.0.1:8000/api/rawdata", 1*time.Second, try.BodyContains("PathPrefix"))
-	c.Assert(err, checker.IsNil)
-
-	err = try.GetRequest("http://127.0.0.1:8000/whoami", 1*time.Second, try.StatusCodeIs(http.StatusOK))
-	c.Assert(err, checker.IsNil)
-}
-
 func (s *SimpleSuite) TestStatsWithMultipleEntryPoint(c *check.C) {
 	c.Skip("Stats is missing")
 	s.createComposeProject(c, "stats")
@@ -221,7 +193,6 @@ func (s *SimpleSuite) TestStatsWithMultipleEntryPoint(c *check.C) {
 
 	err = try.GetRequest("http://127.0.0.1:8080/health", 1*time.Second, try.BodyContains(`"total_status_code_count":{"200":2}`))
 	c.Assert(err, checker.IsNil)
-
 }
 
 func (s *SimpleSuite) TestNoAuthOnPing(c *check.C) {
@@ -250,7 +221,7 @@ func (s *SimpleSuite) TestDefaultEntryPointHTTP(c *check.C) {
 	s.createComposeProject(c, "base")
 	s.composeProject.Start(c)
 
-	cmd, output := s.traefikCmd("--entryPoints.http.Address=:8000", "--log.level=DEBUG", "--providers.docker", "--api")
+	cmd, output := s.traefikCmd("--entryPoints.http.Address=:8000", "--log.level=DEBUG", "--providers.docker", "--api.insecure")
 	defer output(c)
 
 	err := cmd.Start()
@@ -268,7 +239,7 @@ func (s *SimpleSuite) TestWithNonExistingEntryPoint(c *check.C) {
 	s.createComposeProject(c, "base")
 	s.composeProject.Start(c)
 
-	cmd, output := s.traefikCmd("--entryPoints.http.Address=:8000", "--log.level=DEBUG", "--providers.docker", "--api")
+	cmd, output := s.traefikCmd("--entryPoints.http.Address=:8000", "--log.level=DEBUG", "--providers.docker", "--api.insecure")
 	defer output(c)
 
 	err := cmd.Start()
@@ -286,7 +257,7 @@ func (s *SimpleSuite) TestMetricsPrometheusDefaultEntryPoint(c *check.C) {
 	s.createComposeProject(c, "base")
 	s.composeProject.Start(c)
 
-	cmd, output := s.traefikCmd("--entryPoints.http.Address=:8000", "--api", "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0", "--providers.docker", "--log.level=DEBUG")
+	cmd, output := s.traefikCmd("--entryPoints.http.Address=:8000", "--api.insecure", "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0", "--providers.docker", "--log.level=DEBUG")
 	defer output(c)
 
 	err := cmd.Start()
@@ -329,7 +300,6 @@ func (s *SimpleSuite) TestMultipleProviderSameBackendName(c *check.C) {
 
 	err = try.GetRequest("http://127.0.0.1:8000/file", 1*time.Second, try.BodyContains(ipWhoami02))
 	c.Assert(err, checker.IsNil)
-
 }
 
 func (s *SimpleSuite) TestIPStrategyWhitelist(c *check.C) {
@@ -477,7 +447,6 @@ func (s *SimpleSuite) TestMultiProvider(c *check.C) {
 
 	err = try.GetRequest("http://127.0.0.1:8000/", 1*time.Second, try.StatusCodeIs(http.StatusOK), try.BodyContains("CustomValue"))
 	c.Assert(err, checker.IsNil)
-
 }
 
 func (s *SimpleSuite) TestSimpleConfigurationHostRequestTrailingPeriod(c *check.C) {
@@ -544,6 +513,10 @@ func (s *SimpleSuite) TestRouterConfigErrors(c *check.C) {
 
 	// All errors
 	err = try.GetRequest("http://127.0.0.1:8080/api/http/routers", 1000*time.Millisecond, try.BodyContains(`["middleware \"unknown@file\" does not exist","found different TLS options for routers on the same host snitest.net, so using the default TLS options instead"]`))
+	c.Assert(err, checker.IsNil)
+
+	// router3 has an error because it uses an unknown entrypoint
+	err = try.GetRequest("http://127.0.0.1:8080/api/http/routers/router3@file", 1000*time.Millisecond, try.BodyContains(`entryPoint \"unknown-entrypoint\" doesn't exist`, "no valid entryPoint for this router"))
 	c.Assert(err, checker.IsNil)
 
 	// router4 is enabled, but in warning state because its tls options conf was messed up
@@ -649,8 +622,8 @@ func (s *SimpleSuite) TestWRRSticky(c *check.C) {
 	repartition := map[string]int{}
 	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8000/whoami", nil)
 	c.Assert(err, checker.IsNil)
-	for i := 0; i < 4; i++ {
 
+	for i := 0; i < 4; i++ {
 		response, err := http.DefaultClient.Do(req)
 		c.Assert(err, checker.IsNil)
 		c.Assert(response.StatusCode, checker.Equals, http.StatusOK)
@@ -768,9 +741,10 @@ func (s *SimpleSuite) TestMirrorCanceled(c *check.C) {
 		req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:8000/whoami", nil)
 		c.Assert(err, checker.IsNil)
 
-		newCtx, _ := context.WithTimeout(req.Context(), time.Second)
-		req = req.WithContext(newCtx)
-		http.DefaultClient.Do(req)
+		client := &http.Client{
+			Timeout: time.Second,
+		}
+		_, _ = client.Do(req)
 	}
 
 	countTotal := atomic.LoadInt32(&count)
@@ -780,4 +754,28 @@ func (s *SimpleSuite) TestMirrorCanceled(c *check.C) {
 	c.Assert(countTotal, checker.Equals, int32(5))
 	c.Assert(val1, checker.Equals, int32(0))
 	c.Assert(val2, checker.Equals, int32(0))
+}
+
+func (s *SimpleSuite) TestSecureAPI(c *check.C) {
+	s.createComposeProject(c, "base")
+	s.composeProject.Start(c)
+
+	file := s.adaptFile(c, "./fixtures/simple_secure_api.toml", struct{}{})
+	defer os.Remove(file)
+
+	cmd, output := s.traefikCmd(withConfigFile(file))
+	defer output(c)
+
+	err := cmd.Start()
+	c.Assert(err, checker.IsNil)
+	defer cmd.Process.Kill()
+
+	err = try.GetRequest("http://127.0.0.1:8000/secure/api/rawdata", 1*time.Second, try.StatusCodeIs(http.StatusOK))
+	c.Assert(err, checker.IsNil)
+
+	err = try.GetRequest("http://127.0.0.1:8000/api/rawdata", 1*time.Second, try.StatusCodeIs(http.StatusNotFound))
+	c.Assert(err, checker.IsNil)
+
+	err = try.GetRequest("http://127.0.0.1:8080/api/rawdata", 1*time.Second, try.StatusCodeIs(http.StatusNotFound))
+	c.Assert(err, checker.IsNil)
 }

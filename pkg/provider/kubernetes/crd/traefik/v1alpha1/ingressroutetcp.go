@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"github.com/containous/traefik/v2/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -32,6 +33,7 @@ type TLSTCP struct {
 	// Options is a reference to a TLSOption, that specifies the parameters of the TLS connection.
 	Options      *TLSOptionTCPRef `json:"options"`
 	CertResolver string           `json:"certResolver"`
+	Domains      []types.Domain   `json:"domains,omitempty"`
 }
 
 // TLSOptionTCPRef is a ref to the TLSOption resources.
@@ -42,8 +44,10 @@ type TLSOptionTCPRef struct {
 
 // ServiceTCP defines an upstream to proxy traffic.
 type ServiceTCP struct {
-	Name string `json:"name"`
-	Port int32  `json:"port"`
+	Name             string `json:"name"`
+	Port             int32  `json:"port"`
+	Weight           *int   `json:"weight,omitempty"`
+	TerminationDelay *int   `json:"terminationDelay,omitempty"`
 }
 
 // +genclient

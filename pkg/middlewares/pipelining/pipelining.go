@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/containous/traefik/v2/pkg/log"
 	"github.com/containous/traefik/v2/pkg/middlewares"
 )
 
@@ -20,7 +21,7 @@ type pipelining struct {
 
 // New returns a new pipelining instance
 func New(ctx context.Context, next http.Handler, name string) http.Handler {
-	middlewares.GetLogger(ctx, name, typeName).Debug("Creating middleware")
+	log.FromContext(middlewares.GetLoggerCtx(ctx, name, typeName)).Debug("Creating middleware")
 
 	return &pipelining{
 		next: next,
@@ -34,7 +35,6 @@ func (p *pipelining) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	} else {
 		p.next.ServeHTTP(&writerWithoutCloseNotify{rw}, r)
 	}
-
 }
 
 // writerWithoutCloseNotify helps to disable closeNotify

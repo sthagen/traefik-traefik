@@ -14,14 +14,14 @@ Example "A Chain for WhiteList, BasicAuth, and HTTPS"
 
 ```yaml tab="Docker"
 labels:
-- "traefik.http.routers.router1.service=service1"
-- "traefik.http.routers.router1.middlewares=secured"
-- "traefik.http.routers.router1.rule=Host(`mydomain`)"
-- "traefik.http.middlewares.secured.chain.middlewares=https-only,known-ips,auth-users"
-- "traefik.http.middlewares.auth-users.basicauth.users=test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
-- "traefik.http.middlewares.https-only.redirectscheme.scheme=https"
-- "traefik.http.middlewares.known-ips.ipwhitelist.sourceRange=192.168.1.7,127.0.0.1/32"
-- "http.services.service1.loadbalancer.server.port=80"
+  - "traefik.http.routers.router1.service=service1"
+  - "traefik.http.routers.router1.middlewares=secured"
+  - "traefik.http.routers.router1.rule=Host(`mydomain`)"
+  - "traefik.http.middlewares.secured.chain.middlewares=https-only,known-ips,auth-users"
+  - "traefik.http.middlewares.auth-users.basicauth.users=test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
+  - "traefik.http.middlewares.https-only.redirectscheme.scheme=https"
+  - "traefik.http.middlewares.known-ips.ipwhitelist.sourceRange=192.168.1.7,127.0.0.1/32"
+  - "http.services.service1.loadbalancer.server.port=80"
 ```
 
 ```yaml tab="Kubernetes"
@@ -51,9 +51,9 @@ metadata:
 spec:
   chain:
     middlewares:
-    - https-only
-    - known-ips
-    - auth-users
+    - name: https-only
+    - name: known-ips
+    - name: auth-users
 ---
 apiVersion: traefik.containo.us/v1alpha1
 kind: Middleware
@@ -83,6 +83,17 @@ spec:
     - 127.0.0.1/32
 ```
 
+```yaml tab="Consul Catalog"
+- "traefik.http.routers.router1.service=service1"
+- "traefik.http.routers.router1.middlewares=secured"
+- "traefik.http.routers.router1.rule=Host(`mydomain`)"
+- "traefik.http.middlewares.secured.chain.middlewares=https-only,known-ips,auth-users"
+- "traefik.http.middlewares.auth-users.basicauth.users=test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
+- "traefik.http.middlewares.https-only.redirectscheme.scheme=https"
+- "traefik.http.middlewares.known-ips.ipwhitelist.sourceRange=192.168.1.7,127.0.0.1/32"
+- "http.services.service1.loadbalancer.server.port=80"
+```
+
 ```json tab="Marathon"
 "labels": {
   "traefik.http.routers.router1.service": "service1",
@@ -98,14 +109,14 @@ spec:
 
 ```yaml tab="Rancher"
 labels:
-- "traefik.http.routers.router1.service=service1"
-- "traefik.http.routers.router1.middlewares=secured"
-- "traefik.http.routers.router1.rule=Host(`mydomain`)"
-- "traefik.http.middlewares.secured.chain.middlewares=https-only,known-ips,auth-users"
-- "traefik.http.middlewares.auth-users.basicauth.users=test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
-- "traefik.http.middlewares.https-only.redirectscheme.scheme=https"
-- "traefik.http.middlewares.known-ips.ipwhitelist.sourceRange=192.168.1.7,127.0.0.1/32"
-- "http.services.service1.loadbalancer.server.port=80"
+  - "traefik.http.routers.router1.service=service1"
+  - "traefik.http.routers.router1.middlewares=secured"
+  - "traefik.http.routers.router1.rule=Host(`mydomain`)"
+  - "traefik.http.middlewares.secured.chain.middlewares=https-only,known-ips,auth-users"
+  - "traefik.http.middlewares.auth-users.basicauth.users=test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
+  - "traefik.http.middlewares.https-only.redirectscheme.scheme=https"
+  - "traefik.http.middlewares.known-ips.ipwhitelist.sourceRange=192.168.1.7,127.0.0.1/32"
+  - "http.services.service1.loadbalancer.server.port=80"
 ```
 
 ```toml tab="File (TOML)"
@@ -143,21 +154,21 @@ http:
     router1:
       service: service1
       middlewares:
-      - secured
+        - secured
       rule: "Host(`mydomain`)"
 
   middlewares:
     secured:
       chain:
         middlewares:
-        - https-only
-        - known-ips
-        - auth-users
+          - https-only
+          - known-ips
+          - auth-users
 
     auth-users:
       basicAuth:
         users:
-        - "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
+          - "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
 
     https-only:
       redirectScheme:
@@ -166,12 +177,12 @@ http:
     known-ips:
       ipWhiteList:
         sourceRange:
-        - "192.168.1.7"
-        - "127.0.0.1/32"
+          - "192.168.1.7"
+          - "127.0.0.1/32"
 
   services:
     service1:
       loadBalancer:
         servers:
-        - url: "http://127.0.0.1:80"
+          - url: "http://127.0.0.1:80"
 ```

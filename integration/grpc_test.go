@@ -50,7 +50,7 @@ func (s *myserver) StreamExample(in *helloworld.StreamExampleRequest, server hel
 	}
 
 	if err := server.Send(&helloworld.StreamExampleReply{Data: string(data)}); err != nil {
-		log.Error(err)
+		log.WithoutContext().Error(err)
 	}
 
 	<-s.stopStreamExample
@@ -90,7 +90,6 @@ func getHelloClientGRPC() (helloworld.GreeterClient, func() error, error) {
 		return nil, func() error { return nil }, err
 	}
 	return helloworld.NewGreeterClient(conn), conn.Close, nil
-
 }
 
 func getHelloClientGRPCh2c() (helloworld.GreeterClient, func() error, error) {
@@ -99,7 +98,6 @@ func getHelloClientGRPCh2c() (helloworld.GreeterClient, func() error, error) {
 		return nil, func() error { return nil }, err
 	}
 	return helloworld.NewGreeterClient(conn), conn.Close, nil
-
 }
 
 func callHelloClientGRPC(name string, secure bool) (string, error) {

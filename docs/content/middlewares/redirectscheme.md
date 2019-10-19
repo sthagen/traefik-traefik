@@ -3,16 +3,18 @@
 Redirecting the Client to a Different Scheme/Port
 {: .subtitle }
 
-`TODO: add schema`
+<!--
+TODO: add schema
+-->
 
-RegexRedirect redirect request from a scheme to another.
+RedirectScheme redirect request from a scheme to another.
 
 ## Configuration Examples
 
 ```yaml tab="Docker"
 # Redirect to https
 labels:
-- "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https"
+  - "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https"
 ```
 
 ```yaml tab="Kubernetes"
@@ -26,6 +28,12 @@ spec:
     scheme: https
 ```
 
+```yaml tab="Consul Catalog"
+# Redirect to https
+labels:
+- "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https"
+```
+
 ```json tab="Marathon"
 "labels": {
   "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme": "https"
@@ -35,7 +43,7 @@ spec:
 ```yaml tab="Rancher"
 # Redirect to https
 labels:
-- "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https"
+  - "traefik.http.middlewares.test-redirectscheme.redirectscheme.scheme=https"
 ```
 
 ```toml tab="File (TOML)"

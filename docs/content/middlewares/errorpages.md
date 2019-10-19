@@ -15,9 +15,9 @@ The ErrorPage middleware returns a custom page in lieu of the default, according
 ```yaml tab="Docker"
 # Dynamic Custom Error Page for 5XX Status Code
 labels:
-- "traefik.http.middlewares.test-errorpage.errors.status=500-599"
-- "traefik.http.middlewares.test-errorpage.errors.service=serviceError"
-- "traefik.http.middlewares.test-errorpage.errors.query=/{status}.html"
+  - "traefik.http.middlewares.test-errorpage.errors.status=500-599"
+  - "traefik.http.middlewares.test-errorpage.errors.service=serviceError"
+  - "traefik.http.middlewares.test-errorpage.errors.query=/{status}.html"
 ```
 
 ```yaml tab="Kubernetes"
@@ -28,9 +28,18 @@ metadata:
 spec:
   errors:
     status:
-    - 500-599
-    service: serviceError
+      - 500-599
     query: /{status}.html
+    service:
+      name: whoami
+      port: 80
+```
+
+```yaml tab="Consul Catalog"
+# Dynamic Custom Error Page for 5XX Status Code
+- "traefik.http.middlewares.test-errorpage.errors.status=500-599"
+- "traefik.http.middlewares.test-errorpage.errors.service=serviceError"
+- "traefik.http.middlewares.test-errorpage.errors.query=/{status}.html"
 ```
 
 ```json tab="Marathon"
@@ -44,9 +53,9 @@ spec:
 ```yaml tab="Rancher"
 # Dynamic Custom Error Page for 5XX Status Code
 labels:
-- "traefik.http.middlewares.test-errorpage.errors.status=500-599"
-- "traefik.http.middlewares.test-errorpage.errors.service=serviceError"
-- "traefik.http.middlewares.test-errorpage.errors.query=/{status}.html"
+  - "traefik.http.middlewares.test-errorpage.errors.status=500-599"
+  - "traefik.http.middlewares.test-errorpage.errors.service=serviceError"
+  - "traefik.http.middlewares.test-errorpage.errors.query=/{status}.html"
 ```
 
 ```toml tab="File (TOML)"
@@ -68,7 +77,7 @@ http:
     test-errorpage:
       errors:
         status:
-        - "500-599"
+          - "500-599"
         service: serviceError
         query: "/{status}.html"
 
@@ -76,8 +85,8 @@ http:
   # ... definition of error-handler-service and my-service
 ```
 
-!!! note 
-    In this example, the error page URL is based on the status code (`query=/{status}.html)`.
+!!! note "" 
+    In this example, the error page URL is based on the status code (`query=/{status}.html`).
 
 ## Configuration Options
 
@@ -87,13 +96,16 @@ The `status` that will trigger the error page.
 
 The status code ranges are inclusive (`500-599` will trigger with every code between `500` and `599`, `500` and `599` included).
  
-!!! Note
+!!! note "" 
 
     You can define either a status code like `500` or ranges with a syntax like `500-599`.
 
 ### `service`
 
 The service that will serve the new requested error page.
+
+!!! note "" 
+    In kubernetes, you need to reference a kubernetes service instead of a traefik service.
 
 ### `query`
 

@@ -47,6 +47,7 @@ module.exports = function (ctx) {
         'QToolbar',
         'QSpace',
         'QToolbarTitle',
+        'QTooltip',
         'QBtn',
         'QIcon',
         'QList',
@@ -85,7 +86,8 @@ module.exports = function (ctx) {
         'QDialog',
         'QUploader',
         'QTree',
-        'QChip'
+        'QChip',
+        'QBtnToggle'
       ],
 
       directives: [

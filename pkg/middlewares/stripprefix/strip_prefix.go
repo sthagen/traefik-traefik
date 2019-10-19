@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
+	"github.com/containous/traefik/v2/pkg/log"
 	"github.com/containous/traefik/v2/pkg/middlewares"
 	"github.com/containous/traefik/v2/pkg/tracing"
 	"github.com/opentracing/opentracing-go/ext"
@@ -26,7 +27,7 @@ type stripPrefix struct {
 
 // New creates a new strip prefix middleware.
 func New(ctx context.Context, next http.Handler, config dynamic.StripPrefix, name string) (http.Handler, error) {
-	middlewares.GetLogger(ctx, name, typeName).Debug("Creating middleware")
+	log.FromContext(middlewares.GetLoggerCtx(ctx, name, typeName)).Debug("Creating middleware")
 	return &stripPrefix{
 		prefixes: config.Prefixes,
 		next:     next,
@@ -49,7 +50,7 @@ func (s *stripPrefix) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	http.NotFound(rw, req)
+	s.next.ServeHTTP(rw, req)
 }
 
 func (s *stripPrefix) serveRequest(rw http.ResponseWriter, req *http.Request, prefix string) {

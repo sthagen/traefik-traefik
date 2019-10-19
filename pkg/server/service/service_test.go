@@ -80,7 +80,7 @@ func TestGetLoadBalancer(t *testing.T) {
 }
 
 func TestGetLoadBalancerServiceHandler(t *testing.T) {
-	sm := NewManager(nil, http.DefaultTransport, nil, nil)
+	sm := NewManager(nil, http.DefaultTransport, nil, nil, nil, nil)
 
 	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-From", "first")
@@ -221,7 +221,7 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 			serviceName: "test",
 			service: &dynamic.ServersLoadBalancer{
 				Sticky:         &dynamic.Sticky{Cookie: &dynamic.Cookie{}},
-				PassHostHeader: true,
+				PassHostHeader: func(v bool) *bool { return &v }(true),
 				Servers: []dynamic.Server{
 					{
 						URL: serverPassHost.URL,
@@ -239,7 +239,8 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 			desc:        "PassHost doesn't passe the host instead of the IP",
 			serviceName: "test",
 			service: &dynamic.ServersLoadBalancer{
-				Sticky: &dynamic.Sticky{Cookie: &dynamic.Cookie{}},
+				PassHostHeader: Bool(false),
+				Sticky:         &dynamic.Sticky{Cookie: &dynamic.Cookie{}},
 				Servers: []dynamic.Server{
 					{
 						URL: serverPassHostFalse.URL,
@@ -258,7 +259,6 @@ func TestGetLoadBalancerServiceHandler(t *testing.T) {
 	for _, test := range testCases {
 		test := test
 		t.Run(test.desc, func(t *testing.T) {
-
 			handler, err := sm.getLoadBalancerServiceHandler(context.Background(), test.serviceName, test.service, test.responseModifier)
 
 			assert.NoError(t, err)
@@ -332,7 +332,7 @@ func TestManager_Build(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			manager := NewManager(test.configs, http.DefaultTransport, nil, nil)
+			manager := NewManager(test.configs, http.DefaultTransport, nil, nil, nil, nil)
 
 			ctx := context.Background()
 			if len(test.providerName) > 0 {
@@ -353,7 +353,7 @@ func TestMultipleTypeOnBuildHTTP(t *testing.T) {
 				Weighted:     &dynamic.WeightedRoundRobin{},
 			},
 		},
-	}, http.DefaultTransport, nil, nil)
+	}, http.DefaultTransport, nil, nil, nil, nil)
 
 	_, err := manager.BuildHTTP(context.Background(), "test@file", nil)
 	assert.Error(t, err, "cannot create service: multi-types service not supported, consider declaring two different pieces of service instead")

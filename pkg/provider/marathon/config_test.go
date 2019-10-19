@@ -11,6 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Int(v int) *int    { return &v }
+func Bool(v bool) *bool { return &v }
+
 func TestGetConfigurationAPIErrors(t *testing.T) {
 	fakeClient := newFakeClient(true, marathon.Applications{})
 
@@ -62,7 +65,7 @@ func TestBuildConfiguration(t *testing.T) {
 									URL: "http://localhost:80",
 								},
 							},
-							PassHostHeader: true,
+							PassHostHeader: Bool(true),
 						}},
 					},
 				},
@@ -116,7 +119,7 @@ func TestBuildConfiguration(t *testing.T) {
 									URL: "http://localhost:80",
 								},
 							},
-							PassHostHeader: true,
+							PassHostHeader: Bool(true),
 						}},
 					},
 				},
@@ -162,7 +165,7 @@ func TestBuildConfiguration(t *testing.T) {
 									URL: "http://localhost:80",
 								},
 							},
-							PassHostHeader: true,
+							PassHostHeader: Bool(true),
 						}},
 					},
 				},
@@ -209,7 +212,7 @@ func TestBuildConfiguration(t *testing.T) {
 									URL: "http://localhost:8081",
 								},
 							},
-							PassHostHeader: true,
+							PassHostHeader: Bool(true),
 						}},
 					},
 				},
@@ -264,7 +267,7 @@ func TestBuildConfiguration(t *testing.T) {
 									URL: "http://localhost:8083",
 								},
 							},
-							PassHostHeader: true,
+							PassHostHeader: Bool(true),
 						}},
 					},
 				},
@@ -306,7 +309,7 @@ func TestBuildConfiguration(t *testing.T) {
 									URL: "http://localhost:8080",
 								},
 							},
-							PassHostHeader: true,
+							PassHostHeader: Bool(true),
 						}},
 						"bar": {LoadBalancer: &dynamic.ServersLoadBalancer{
 							Servers: []dynamic.Server{
@@ -314,7 +317,7 @@ func TestBuildConfiguration(t *testing.T) {
 									URL: "http://localhost:8081",
 								},
 							},
-							PassHostHeader: true,
+							PassHostHeader: Bool(true),
 						}},
 					},
 				},
@@ -352,7 +355,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:81",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -388,7 +391,7 @@ func TestBuildConfiguration(t *testing.T) {
 									URL: "http://localhost:80",
 								},
 							},
-							PassHostHeader: true,
+							PassHostHeader: Bool(true),
 						}},
 					},
 				},
@@ -426,7 +429,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -457,7 +460,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -501,7 +504,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -535,7 +538,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 						"Service2": {
@@ -545,7 +548,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -637,7 +640,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 						"app2": {
@@ -647,7 +650,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -694,7 +697,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 						"app2": {
@@ -704,7 +707,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -742,7 +745,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 						"app2": {
@@ -752,7 +755,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -800,7 +803,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -838,7 +841,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 						"app2": {
@@ -848,7 +851,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -885,7 +888,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -923,7 +926,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "h2c://localhost:90",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -956,7 +959,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 						"Service2": {
@@ -966,7 +969,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:8080",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -1131,7 +1134,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -1169,7 +1172,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -1206,7 +1209,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},
@@ -1234,12 +1237,13 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.TCPService{
 						"app": {
-							LoadBalancer: &dynamic.TCPLoadBalancerService{
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
 								Servers: []dynamic.TCPServer{
 									{
 										Address: "localhost:80",
 									},
 								},
+								TerminationDelay: Int(100),
 							},
 						},
 					},
@@ -1265,12 +1269,13 @@ func TestBuildConfiguration(t *testing.T) {
 					Routers: map[string]*dynamic.TCPRouter{},
 					Services: map[string]*dynamic.TCPService{
 						"app": {
-							LoadBalancer: &dynamic.TCPLoadBalancerService{
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
 								Servers: []dynamic.TCPServer{
 									{
 										Address: "localhost:80",
 									},
 								},
+								TerminationDelay: Int(100),
 							},
 						},
 					},
@@ -1304,12 +1309,54 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.TCPService{
 						"foo": {
-							LoadBalancer: &dynamic.TCPLoadBalancerService{
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
 								Servers: []dynamic.TCPServer{
 									{
 										Address: "localhost:8080",
 									},
 								},
+								TerminationDelay: Int(100),
+							},
+						},
+					},
+				},
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:     map[string]*dynamic.Router{},
+					Middlewares: map[string]*dynamic.Middleware{},
+					Services:    map[string]*dynamic.Service{},
+				},
+			},
+		},
+		{
+			desc: "one app with tcp labels with port, with termination delay",
+			applications: withApplications(
+				application(
+					appID("/app"),
+					appPorts(80, 81),
+					withTasks(localhostTask(taskPorts(80, 81))),
+					withLabel("traefik.tcp.routers.foo.rule", "HostSNI(`foo.bar`)"),
+					withLabel("traefik.tcp.routers.foo.tls", "true"),
+					withLabel("traefik.tcp.services.foo.loadbalancer.server.port", "8080"),
+					withLabel("traefik.tcp.services.foo.loadbalancer.terminationdelay", "200"),
+				)),
+			expected: &dynamic.Configuration{
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
+						"foo": {
+							Service: "foo",
+							Rule:    "HostSNI(`foo.bar`)",
+							TLS:     &dynamic.RouterTCPTLSConfig{},
+						},
+					},
+					Services: map[string]*dynamic.TCPService{
+						"foo": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "localhost:8080",
+									},
+								},
+								TerminationDelay: Int(200),
 							},
 						},
 					},
@@ -1344,12 +1391,13 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Services: map[string]*dynamic.TCPService{
 						"foo": {
-							LoadBalancer: &dynamic.TCPLoadBalancerService{
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
 								Servers: []dynamic.TCPServer{
 									{
 										Address: "localhost:8080",
 									},
 								},
+								TerminationDelay: Int(100),
 							},
 						},
 					},
@@ -1370,7 +1418,7 @@ func TestBuildConfiguration(t *testing.T) {
 										URL: "http://localhost:80",
 									},
 								},
-								PassHostHeader: true,
+								PassHostHeader: Bool(true),
 							},
 						},
 					},

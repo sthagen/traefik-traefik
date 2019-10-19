@@ -3,7 +3,9 @@
 Updating the Path Before Forwarding the Request
 {: .subtitle }
 
-`TODO: add schema`
+<!--
+TODO: add schema
+-->
 
 Replace the path of the request url.
 
@@ -12,7 +14,7 @@ Replace the path of the request url.
 ```yaml tab="Docker"
 # Replace the path by /foo
 labels:
-- "traefik.http.middlewares.test-replacepath.replacepath.path=/foo"
+  - "traefik.http.middlewares.test-replacepath.replacepath.path=/foo"
 ```
 
 ```yaml tab="Kubernetes"
@@ -26,6 +28,11 @@ spec:
     path: /foo
 ```
 
+```yaml tab="Consul Catalog"
+# Replace the path by /foo
+- "traefik.http.middlewares.test-replacepath.replacepath.path=/foo"
+```
+
 ```json tab="Marathon"
 "labels": {
   "traefik.http.middlewares.test-replacepath.replacepath.path": "/foo"
@@ -35,7 +42,7 @@ spec:
 ```yaml tab="Rancher"
 # Replace the path by /foo
 labels:
-- "traefik.http.middlewares.test-replacepath.replacepath.path=/foo"
+  - "traefik.http.middlewares.test-replacepath.replacepath.path=/foo"
 ```
 
 ```toml tab="File (TOML)"

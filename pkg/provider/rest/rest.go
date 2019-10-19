@@ -18,6 +18,7 @@ var _ provider.Provider = (*Provider)(nil)
 
 // Provider is a provider.Provider implementation that provides a Rest API.
 type Provider struct {
+	Insecure          bool `description:"Activate REST Provider directly on the entryPoint named traefik." json:"insecure,omitempty" toml:"insecure,omitempty" yaml:"insecure,omitempty" export:"true"`
 	configurationChan chan<- dynamic.Message
 }
 
@@ -32,13 +33,19 @@ func (p *Provider) Init() error {
 	return nil
 }
 
+// Handler creates an http.Handler for the Rest API
+func (p *Provider) Handler() http.Handler {
+	router := mux.NewRouter()
+	p.Append(router)
+	return router
+}
+
 // Append add rest provider routes on a router.
 func (p *Provider) Append(systemRouter *mux.Router) {
 	systemRouter.
 		Methods(http.MethodPut).
 		Path("/api/providers/{provider}").
 		HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-
 			vars := mux.Vars(request)
 			if vars["provider"] != "rest" {
 				response.WriteHeader(http.StatusBadRequest)

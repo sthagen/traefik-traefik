@@ -1,6 +1,6 @@
 {
 	"loadBalancer": {
-		"passHostHeader": false,
+		"passHostHeader": true,
 		"servers": [
 			{
 				"url": "http://127.0.0.1"
@@ -13,6 +13,7 @@
 		"http://127.0.0.1": "UP"
 	},
 	"status": "enabled",
+	"type": "loadbalancer",
 	"usedBy": [
 		"foo@myprovider",
 		"test@myprovider"

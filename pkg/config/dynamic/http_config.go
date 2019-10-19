@@ -77,7 +77,7 @@ type WRRService struct {
 	Weight *int   `json:"weight,omitempty" toml:"weight,omitempty" yaml:"weight,omitempty"`
 }
 
-// SetDefaults Default values for a ServersLoadBalancer.
+// SetDefaults Default values for a WRRService.
 func (w *WRRService) SetDefaults() {
 	defaultWeight := 1
 	w.Weight = &defaultWeight
@@ -106,7 +106,7 @@ type ServersLoadBalancer struct {
 	Sticky             *Sticky             `json:"sticky,omitempty" toml:"sticky,omitempty" yaml:"sticky,omitempty" label:"allowEmpty"`
 	Servers            []Server            `json:"servers,omitempty" toml:"servers,omitempty" yaml:"servers,omitempty" label-slice-as-struct:"server"`
 	HealthCheck        *HealthCheck        `json:"healthCheck,omitempty" toml:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
-	PassHostHeader     bool                `json:"passHostHeader" toml:"passHostHeader" yaml:"passHostHeader"`
+	PassHostHeader     *bool               `json:"passHostHeader" toml:"passHostHeader" yaml:"passHostHeader"`
 	ResponseForwarding *ResponseForwarding `json:"responseForwarding,omitempty" toml:"responseForwarding,omitempty" yaml:"responseForwarding,omitempty"`
 }
 
@@ -129,7 +129,8 @@ func (l *ServersLoadBalancer) Mergeable(loadBalancer *ServersLoadBalancer) bool 
 
 // SetDefaults Default values for a ServersLoadBalancer.
 func (l *ServersLoadBalancer) SetDefaults() {
-	l.PassHostHeader = true
+	defaultPassHostHeader := true
+	l.PassHostHeader = &defaultPassHostHeader
 }
 
 // +k8s:deepcopy-gen=true

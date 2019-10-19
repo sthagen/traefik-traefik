@@ -64,7 +64,7 @@ func (p *Provider) loadIngressRouteConfiguration(ctx context.Context, client Cli
 			serviceName := makeID(ingressRoute.Namespace, key)
 
 			for _, service := range route.Services {
-				balancerServerHTTP, err := createLoadBalancerServerHTTP(client, ingressRoute, service)
+				balancerServerHTTP, err := createLoadBalancerServerHTTP(client, ingressRoute.Namespace, service)
 				if err != nil {
 					logger.
 						WithField("serviceName", service.Name).
@@ -73,6 +73,8 @@ func (p *Provider) loadIngressRouteConfiguration(ctx context.Context, client Cli
 					continue
 				}
 
+				// If there is only one service defined, we skip the creation of the load balancer of services,
+				// i.e. the service on top is directly a load balancer of servers.
 				if len(route.Services) == 1 {
 					conf.Services[serviceName] = balancerServerHTTP
 					break
@@ -123,6 +125,7 @@ func (p *Provider) loadIngressRouteConfiguration(ctx context.Context, client Cli
 			if ingressRoute.Spec.TLS != nil {
 				tlsConf := &dynamic.RouterTLSConfig{
 					CertResolver: ingressRoute.Spec.TLS.CertResolver,
+					Domains:      ingressRoute.Spec.TLS.Domains,
 				}
 
 				if ingressRoute.Spec.TLS.Options != nil && len(ingressRoute.Spec.TLS.Options.Name) > 0 {
@@ -144,25 +147,33 @@ func (p *Provider) loadIngressRouteConfiguration(ctx context.Context, client Cli
 				}
 				conf.Routers[serviceName].TLS = tlsConf
 			}
-
 		}
 	}
 
 	return conf
 }
 
-func createLoadBalancerServerHTTP(client Client, ingressRoute *v1alpha1.IngressRoute, service v1alpha1.Service) (*dynamic.Service, error) {
-	servers, err := loadServers(client, ingressRoute.Namespace, service)
+func createLoadBalancerServerHTTP(client Client, namespace string, service v1alpha1.Service) (*dynamic.Service, error) {
+	servers, err := loadServers(client, namespace, service)
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO: support other strategies.
+	lb := &dynamic.ServersLoadBalancer{}
+	lb.SetDefaults()
+
+	lb.Servers = servers
+
+	lb.PassHostHeader = service.PassHostHeader
+	if lb.PassHostHeader == nil {
+		passHostHeader := true
+		lb.PassHostHeader = &passHostHeader
+	}
+	lb.ResponseForwarding = service.ResponseForwarding
+
 	return &dynamic.Service{
-		LoadBalancer: &dynamic.ServersLoadBalancer{
-			Servers: servers,
-			// TODO: support other strategies.
-			PassHostHeader: true,
-		},
+		LoadBalancer: lb,
 	}, nil
 }
 
@@ -181,7 +192,7 @@ func loadServers(client Client, namespace string, svc v1alpha1.Service) ([]dynam
 	}
 
 	if !exists {
-		return nil, errors.New("service not found")
+		return nil, fmt.Errorf("service not found %s/%s", namespace, svc.Name)
 	}
 
 	var portSpec *corev1.ServicePort

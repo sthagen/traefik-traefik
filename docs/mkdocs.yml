@@ -58,9 +58,9 @@ markdown_extensions:
   - pymdownx.tasklist
   - pymdownx.snippets:
       check_paths: true
-  - markdown_include.include:
-      base_path: content/includes/
-      encoding: utf-8
+#  - markdown_include.include:
+#      base_path: content/includes/
+#      encoding: utf-8
   - toc:
       permalink: true
 
@@ -77,14 +77,21 @@ nav:
       - 'Docker': 'providers/docker.md'
       - 'Kubernetes IngressRoute': 'providers/kubernetes-crd.md'
       - 'Kubernetes Ingress': 'providers/kubernetes-ingress.md'
+      - 'Consul Catalog': 'providers/consul-catalog.md'
+      - 'Marathon': 'providers/marathon.md'
       - 'Rancher': 'providers/rancher.md'
       - 'File': 'providers/file.md'
-      - 'Marathon': 'providers/marathon.md'
   - 'Routing & Load Balancing':
       - 'Overview': 'routing/overview.md'
-      - 'Entrypoints': 'routing/entrypoints.md'
+      - 'EntryPoints': 'routing/entrypoints.md'
       - 'Routers': 'routing/routers/index.md'
       - 'Services': 'routing/services/index.md'
+      - 'Providers':
+          - 'Docker': 'routing/providers/docker.md'
+          - 'Kubernetes IngressRoute': 'routing/providers/kubernetes-crd.md'
+          - 'Consul Catalog': 'routing/providers/consul-catalog.md'
+          - 'Marathon': 'routing/providers/marathon.md'
+          - 'Rancher': 'routing/providers/rancher.md'
   - 'HTTPS & TLS':
       - 'Overview': 'https/overview.md'
       - 'TLS': 'https/tls.md'
@@ -122,7 +129,7 @@ nav:
       - 'Access Logs': 'observability/access-logs.md'
       - 'Metrics':
           - 'Overview': 'observability/metrics/overview.md'
-          - 'DataDog': 'observability/metrics/datadog.md'
+          - 'Datadog': 'observability/metrics/datadog.md'
           - 'InfluxDB': 'observability/metrics/influxdb.md'
           - 'Prometheus': 'observability/metrics/prometheus.md'
           - 'StatsD': 'observability/metrics/statsd.md'
@@ -130,7 +137,7 @@ nav:
           - 'Overview': 'observability/tracing/overview.md'
           - 'Jaeger': 'observability/tracing/jaeger.md'
           - 'Zipkin': 'observability/tracing/zipkin.md'
-          - 'DataDog': 'observability/tracing/datadog.md'
+          - 'Datadog': 'observability/tracing/datadog.md'
           - 'Instana': 'observability/tracing/instana.md'
           - 'Haystack': 'observability/tracing/haystack.md'
   - 'User Guides':
@@ -143,6 +150,8 @@ nav:
           - 'TLS Challenge': 'user-guides/docker-compose/acme-tls/index.md'
           - 'HTTP Challenge': 'user-guides/docker-compose/acme-http/index.md'
           - 'DNS Challenge': 'user-guides/docker-compose/acme-dns/index.md'
+  - 'Migration':
+      - 'Traefik v1 to v2': 'migration/v1-to-v2.md'
   - 'Contributing':
       - 'Thank You!': 'contributing/thank-you.md'
       - 'Submitting Issues': 'contributing/submitting-issues.md'
@@ -163,5 +172,6 @@ nav:
         - 'File': 'reference/dynamic-configuration/file.md'
         - 'Docker': 'reference/dynamic-configuration/docker.md'
         - 'Kubernetes CRD': 'reference/dynamic-configuration/kubernetes-crd.md'
+        - 'Consul Catalog': 'reference/dynamic-configuration/consul-catalog.md'
         - 'Marathon': 'reference/dynamic-configuration/marathon.md'
         - 'Rancher': 'reference/dynamic-configuration/rancher.md'

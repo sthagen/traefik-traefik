@@ -45,6 +45,9 @@ Activate dashboard. (Default: ```true```)
 `TRAEFIK_API_DEBUG`:  
 Enable additional endpoints for debugging and profiling. (Default: ```false```)
 
+`TRAEFIK_API_INSECURE`:  
+Activate API directly on the entryPoint named traefik. (Default: ```false```)
+
 `TRAEFIK_CERTIFICATESRESOLVERS_<NAME>`:  
 Certificates resolvers configuration. (Default: ```false```)
 
@@ -151,19 +154,19 @@ Traefik log format: json | common (Default: ```common```)
 Log level set to traefik logs. (Default: ```ERROR```)
 
 `TRAEFIK_METRICS_DATADOG`:  
-DataDog metrics exporter type. (Default: ```false```)
+Datadog metrics exporter type. (Default: ```false```)
 
 `TRAEFIK_METRICS_DATADOG_ADDENTRYPOINTSLABELS`:  
 Enable metrics on entry points. (Default: ```true```)
 
 `TRAEFIK_METRICS_DATADOG_ADDRESS`:  
-DataDog's address. (Default: ```localhost:8125```)
+Datadog's address. (Default: ```localhost:8125```)
 
 `TRAEFIK_METRICS_DATADOG_ADDSERVICESLABELS`:  
 Enable metrics on services. (Default: ```true```)
 
 `TRAEFIK_METRICS_DATADOG_PUSHINTERVAL`:  
-DataDog push interval. (Default: ```10```)
+Datadog push interval. (Default: ```10```)
 
 `TRAEFIK_METRICS_INFLUXDB`:  
 InfluxDB metrics exporter type. (Default: ```false```)
@@ -207,6 +210,9 @@ Enable metrics on services. (Default: ```true```)
 `TRAEFIK_METRICS_PROMETHEUS_BUCKETS`:  
 Buckets for latency metrics. (Default: ```0.100000, 0.300000, 1.200000, 5.000000```)
 
+`TRAEFIK_METRICS_PROMETHEUS_ENTRYPOINT`:  
+EntryPoint (Default: ```traefik```)
+
 `TRAEFIK_METRICS_STATSD`:  
 StatsD metrics exporter type. (Default: ```false```)
 
@@ -223,7 +229,61 @@ Enable metrics on services. (Default: ```true```)
 StatsD push interval. (Default: ```10```)
 
 `TRAEFIK_PING`:  
-Enable ping. (Default: ```true```)
+Enable ping. (Default: ```false```)
+
+`TRAEFIK_PING_ENTRYPOINT`:  
+EntryPoint (Default: ```traefik```)
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_CONSTRAINTS`:  
+Constraints is an expression that Traefik matches against the container's labels to determine whether to create any route for that container.
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_DEFAULTRULE`:  
+Default rule. (Default: ```Host(`{{ normalize .Name }}`)```)
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_ADDRESS`:  
+The address of the Consul server (Default: ```http://127.0.0.1:8500```)
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_DATACENTER`:  
+Data center to use. If not provided, the default agent data center is used
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_ENDPOINTWAITTIME`:  
+WaitTime limits how long a Watch will block. If not provided, the agent default values will be used (Default: ```0```)
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_HTTPAUTH_PASSWORD`:  
+Basic Auth password
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_HTTPAUTH_USERNAME`:  
+Basic Auth username
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_SCHEME`:  
+The URI scheme for the Consul server
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_TLS_CA`:  
+TLS CA
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_TLS_CAOPTIONAL`:  
+TLS CA.Optional (Default: ```false```)
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_TLS_CERT`:  
+TLS cert
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_TLS_INSECURESKIPVERIFY`:  
+TLS insecure skip verify (Default: ```false```)
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_TLS_KEY`:  
+TLS key
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_TOKEN`:  
+Token is used to provide a per-request ACL token which overrides the agent's default token
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_EXPOSEDBYDEFAULT`:  
+Expose containers by default. (Default: ```true```)
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_PREFIX`:  
+Prefix for consul service tags. Default 'traefik' (Default: ```traefik```)
+
+`TRAEFIK_PROVIDERS_CONSULCATALOG_REFRESHINTERVAL`:  
+Interval for check Consul API. Default 100ms (Default: ```15```)
 
 `TRAEFIK_PROVIDERS_DOCKER`:  
 Enable Docker backend with default settings. (Default: ```false```)
@@ -274,10 +334,10 @@ Watch provider. (Default: ```true```)
 Enable debug logging of generated configuration template. (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_FILE_DIRECTORY`:  
-Load configuration from one or more .toml files in a directory.
+Load dynamic configuration from one or more .toml or .yml files in a directory.
 
 `TRAEFIK_PROVIDERS_FILE_FILENAME`:  
-Override default configuration template. For advanced users :)
+Load dynamic configuration from a file.
 
 `TRAEFIK_PROVIDERS_FILE_WATCH`:  
 Watch provider. (Default: ```true```)
@@ -302,6 +362,9 @@ Kubernetes label selector to use.
 
 `TRAEFIK_PROVIDERS_KUBERNETESCRD_NAMESPACES`:  
 Kubernetes namespaces.
+
+`TRAEFIK_PROVIDERS_KUBERNETESCRD_THROTTLEDURATION`:  
+Ingress refresh throttle duration (Default: ```0```)
 
 `TRAEFIK_PROVIDERS_KUBERNETESCRD_TOKEN`:  
 Kubernetes bearer token (not needed for in-cluster client).
@@ -335,6 +398,9 @@ Kubernetes Ingress label selector to use.
 
 `TRAEFIK_PROVIDERS_KUBERNETESINGRESS_NAMESPACES`:  
 Kubernetes namespaces.
+
+`TRAEFIK_PROVIDERS_KUBERNETESINGRESS_THROTTLEDURATION`:  
+Ingress refresh throttle duration (Default: ```0```)
 
 `TRAEFIK_PROVIDERS_KUBERNETESINGRESS_TOKEN`:  
 Kubernetes bearer token (not needed for in-cluster client).
@@ -433,7 +499,10 @@ Defines the polling interval in seconds. (Default: ```15```)
 Watch provider. (Default: ```true```)
 
 `TRAEFIK_PROVIDERS_REST`:  
-Enable Rest backend with default settings. (Default: ```true```)
+Enable Rest backend with default settings. (Default: ```false```)
+
+`TRAEFIK_PROVIDERS_REST_INSECURE`:  
+Activate REST Provider directly on the entryPoint named traefik. (Default: ```false```)
 
 `TRAEFIK_SERVERSTRANSPORT_FORWARDINGTIMEOUTS_DIALTIMEOUT`:  
 The amount of time to wait until a connection to a backend server can be established. If zero, no timeout exists. (Default: ```30```)
@@ -457,13 +526,13 @@ Add cert file for self-signed certificate.
 OpenTracing configuration. (Default: ```false```)
 
 `TRAEFIK_TRACING_DATADOG`:  
-Settings for DataDog. (Default: ```false```)
+Settings for Datadog. (Default: ```false```)
 
 `TRAEFIK_TRACING_DATADOG_BAGAGEPREFIXHEADERNAME`:  
 Specifies the header name prefix that will be used to store baggage items in a map.
 
 `TRAEFIK_TRACING_DATADOG_DEBUG`:  
-Enable DataDog debug. (Default: ```false```)
+Enable Datadog debug. (Default: ```false```)
 
 `TRAEFIK_TRACING_DATADOG_GLOBALTAG`:  
 Key:Value tag to be set on all the spans.
@@ -561,11 +630,8 @@ Set the maximum character limit for Span names (default 0 = no limit). (Default:
 `TRAEFIK_TRACING_ZIPKIN`:  
 Settings for Zipkin. (Default: ```false```)
 
-`TRAEFIK_TRACING_ZIPKIN_DEBUG`:  
-Enable Zipkin debug. (Default: ```false```)
-
 `TRAEFIK_TRACING_ZIPKIN_HTTPENDPOINT`:  
-HTTP Endpoint to report traces to. (Default: ```http://localhost:9411/api/v1/spans```)
+HTTP Endpoint to report traces to. (Default: ```http://localhost:9411/api/v2/spans```)
 
 `TRAEFIK_TRACING_ZIPKIN_ID128BIT`:  
 Use Zipkin 128 bit root span IDs. (Default: ```true```)

@@ -28,9 +28,9 @@ var _ provider.Provider = (*Provider)(nil)
 
 // Provider holds configurations of the provider.
 type Provider struct {
-	Directory                 string `description:"Load configuration from one or more .toml files in a directory." json:"directory,omitempty" toml:"directory,omitempty" yaml:"directory,omitempty" export:"true"`
+	Directory                 string `description:"Load dynamic configuration from one or more .toml or .yml files in a directory." json:"directory,omitempty" toml:"directory,omitempty" yaml:"directory,omitempty" export:"true"`
 	Watch                     bool   `description:"Watch provider." json:"watch,omitempty" toml:"watch,omitempty" yaml:"watch,omitempty" export:"true"`
-	Filename                  string `description:"Override default configuration template. For advanced users :)" json:"filename,omitempty" toml:"filename,omitempty" yaml:"filename,omitempty" export:"true"`
+	Filename                  string `description:"Load dynamic configuration from a file." json:"filename,omitempty" toml:"filename,omitempty" yaml:"filename,omitempty" export:"true"`
 	DebugLogGeneratedTemplate bool   `description:"Enable debug logging of generated configuration template." json:"debugLogGeneratedTemplate,omitempty" toml:"debugLogGeneratedTemplate,omitempty" yaml:"debugLogGeneratedTemplate,omitempty" export:"true"`
 }
 
@@ -85,7 +85,7 @@ func (p *Provider) BuildConfiguration() (*dynamic.Configuration, error) {
 	}
 
 	if len(p.Filename) > 0 {
-		return p.loadFileConfig(p.Filename, true)
+		return p.loadFileConfig(ctx, p.Filename, true)
 	}
 
 	return nil, errors.New("error using file configuration provider, neither filename or directory defined")
@@ -156,11 +156,11 @@ func sendConfigToChannel(configurationChan chan<- dynamic.Message, configuration
 	}
 }
 
-func (p *Provider) loadFileConfig(filename string, parseTemplate bool) (*dynamic.Configuration, error) {
+func (p *Provider) loadFileConfig(ctx context.Context, filename string, parseTemplate bool) (*dynamic.Configuration, error) {
 	var err error
 	var configuration *dynamic.Configuration
 	if parseTemplate {
-		configuration, err = p.CreateConfiguration(filename, template.FuncMap{}, false)
+		configuration, err = p.CreateConfiguration(ctx, filename, template.FuncMap{}, false)
 	} else {
 		configuration, err = p.DecodeConfiguration(filename)
 	}
@@ -169,25 +169,25 @@ func (p *Provider) loadFileConfig(filename string, parseTemplate bool) (*dynamic
 	}
 
 	if configuration.TLS != nil {
-		configuration.TLS.Certificates = flattenCertificates(configuration.TLS)
+		configuration.TLS.Certificates = flattenCertificates(ctx, configuration.TLS)
 	}
 
 	return configuration, nil
 }
 
-func flattenCertificates(tlsConfig *dynamic.TLSConfiguration) []*tls.CertAndStores {
+func flattenCertificates(ctx context.Context, tlsConfig *dynamic.TLSConfiguration) []*tls.CertAndStores {
 	var certs []*tls.CertAndStores
 	for _, cert := range tlsConfig.Certificates {
 		content, err := cert.Certificate.CertFile.Read()
 		if err != nil {
-			log.Error(err)
+			log.FromContext(ctx).Error(err)
 			continue
 		}
 		cert.Certificate.CertFile = tls.FileOrContent(string(content))
 
 		content, err = cert.Certificate.KeyFile.Read()
 		if err != nil {
-			log.Error(err)
+			log.FromContext(ctx).Error(err)
 			continue
 		}
 		cert.Certificate.KeyFile = tls.FileOrContent(string(content))
@@ -243,7 +243,7 @@ func (p *Provider) loadFileConfigFromDirectory(ctx context.Context, directory st
 		}
 
 		var c *dynamic.Configuration
-		c, err = p.loadFileConfig(filepath.Join(directory, item.Name()), true)
+		c, err = p.loadFileConfig(ctx, filepath.Join(directory, item.Name()), true)
 		if err != nil {
 			return configuration, err
 		}
@@ -331,7 +331,7 @@ func (p *Provider) loadFileConfigFromDirectory(ctx context.Context, directory st
 }
 
 // CreateConfiguration creates a provider configuration from content using templating.
-func (p *Provider) CreateConfiguration(filename string, funcMap template.FuncMap, templateObjects interface{}) (*dynamic.Configuration, error) {
+func (p *Provider) CreateConfiguration(ctx context.Context, filename string, funcMap template.FuncMap, templateObjects interface{}) (*dynamic.Configuration, error) {
 	tmplContent, err := readFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("error reading configuration file: %s - %s", filename, err)
@@ -359,7 +359,7 @@ func (p *Provider) CreateConfiguration(filename string, funcMap template.FuncMap
 
 	var renderedTemplate = buffer.String()
 	if p.DebugLogGeneratedTemplate {
-		logger := log.WithoutContext().WithField(log.ProviderName, providerName)
+		logger := log.FromContext(ctx)
 		logger.Debugf("Template content: %s", tmplContent)
 		logger.Debugf("Rendering results: %s", renderedTemplate)
 	}

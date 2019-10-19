@@ -34,23 +34,20 @@ metadata:
 
 spec:
   rules:
-  - host: foo.com
-    http:
-      paths:
-      - path: /bar
-        backend:
-          serviceName: service1
-          servicePort: 80
-      - path: /foo
-        backend:
-          serviceName: service1
-          servicePort: 80
+    - host: foo.com
+      http:
+        paths:
+          - path: /bar
+            backend:
+              serviceName: service1
+              servicePort: 80
+          - path: /foo
+            backend:
+              serviceName: service1
+              servicePort: 80
 ```
 
-## Provider Configuration Options
-
-!!! tip "Browse the Reference"
-    If you're in a hurry, maybe you'd rather go through the [static](../reference/static-configuration/overview.md) configuration reference.
+## Provider Configuration
 
 ### `endpoint`
 
@@ -168,8 +165,8 @@ _Optional, Default: all namespaces (empty array)_
 providers:
   kubernetesIngress:
     namespaces:
-    - "default"
-    - "production"
+      - "default"
+      - "production"
     # ...
 ```
 
@@ -304,6 +301,27 @@ providers:
 ```
 
 Published Kubernetes Service to copy status from.
+
+### `throttleDuration`
+
+_Optional, Default: 0 (no throttling)_
+
+```toml tab="File (TOML)"
+[providers.kubernetesIngress]
+  throttleDuration = "10s"
+  # ...
+```
+
+```yaml tab="File (YAML)"
+providers:
+  kubernetesIngress:
+    throttleDuration: "10s"
+    # ...
+```
+
+```bash tab="CLI"
+--providers.kubernetesingress.throttleDuration="10s"
+```
 
 ## Further
 

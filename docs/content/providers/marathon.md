@@ -49,10 +49,11 @@ See also [Marathon user guide](../user-guides/marathon.md).
 	}
     ```
 
-## Provider Configuration Options
+## Routing Configuration
 
-!!! tip "Browse the Reference"
-    If you're in a hurry, maybe you'd rather go through the [static](../reference/static-configuration/overview.md) and the [dynamic](../reference/dynamic-configuration/marathon.md) configuration references.
+See the dedicated section in [routing](../routing/providers/marathon.md).
+
+## Provider Configuration
 
 ### `basic`
 
@@ -243,7 +244,7 @@ That is to say, if none of the application's labels match the expression, no rou
 In addition, the expression also matched against the application's constraints, such as described in [Marathon constraints](https://mesosphere.github.io/marathon/docs/constraints.html).
 If the expression is empty, all detected applications are included.
 
-The expression syntax is based on the `Label("key", "value")`, and `LabelRegexp("key", "value")`, as well as the usual boolean logic.
+The expression syntax is based on the `Label("key", "value")`, and `LabelRegex("key", "value")`, as well as the usual boolean logic.
 In addition, to match against marathon constraints, the function `MarathonConstraint("field:operator:value")` can be used, where the field, operator, and value parts are joined together in a single string with the `:` separator.
 
 ??? example "Constraints Expression Examples"
@@ -275,7 +276,7 @@ In addition, to match against marathon constraints, the function `MarathonConstr
     
     ```toml
     # Includes only applications having a label with key `a.label.name` and a value matching the `a.+` regular expression.
-    constraints = "LabelRegexp(`a.label.name`, `a.+`)"
+    constraints = "LabelRegex(`a.label.name`, `a.+`)"
     ```
 
     ```toml
@@ -398,36 +399,120 @@ when waiting for the first response header from a Marathon master.
 
 Can be provided in a format supported by [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration), or directly as a number of seconds.
 
-### `TLS`
+### `tls`
 
 _Optional_
 
+#### `tls.ca`
+
+Certificate Authority used for the secured connection to Marathon.
+
 ```toml tab="File (TOML)"
 [providers.marathon.tls]
-  ca = "/etc/ssl/ca.crt"
-  cert = "/etc/ssl/marathon.cert"
-  key = "/etc/ssl/marathon.key"
+  ca = "path/to/ca.crt"
+```
+
+```yaml tab="File (YAML)"
+providers:
+  marathon:
+    tls:
+      ca: path/to/ca.crt
+```
+
+```bash tab="CLI"
+--providers.marathon.tls.ca=path/to/ca.crt
+```
+
+#### `tls.caOptional`
+
+Policy followed for the secured connection to Marathon with TLS Client Authentication.
+Requires `tls.ca` to be defined.
+
+- `true`: VerifyClientCertIfGiven
+- `false`: RequireAndVerifyClientCert
+- if `tls.ca` is undefined NoClientCert
+
+```toml tab="File (TOML)"
+[providers.marathon.tls]
+  caOptional = true
+```
+
+```yaml tab="File (YAML)"
+providers:
+  marathon:
+    tls:
+      caOptional: true
+```
+
+```bash tab="CLI"
+--providers.marathon.tls.caOptional=true
+```
+
+#### `tls.cert`
+
+Public certificate used for the secured connection to Marathon.
+
+```toml tab="File (TOML)"
+[providers.marathon.tls]
+  cert = "path/to/foo.cert"
+  key = "path/to/foo.key"
+```
+
+```yaml tab="File (YAML)"
+providers:
+  marathon:
+    tls:
+      cert: path/to/foo.cert
+      key: path/to/foo.key
+```
+
+```bash tab="CLI"
+--providers.marathon.tls.cert=path/to/foo.cert
+--providers.marathon.tls.key=path/to/foo.key
+```
+
+#### `tls.key`
+
+Private certificate used for the secured connection to Marathon.
+
+```toml tab="File (TOML)"
+[providers.marathon.tls]
+  cert = "path/to/foo.cert"
+  key = "path/to/foo.key"
+```
+
+```yaml tab="File (YAML)"
+providers:
+  marathon:
+    tls:
+      cert: path/to/foo.cert
+      key: path/to/foo.key
+```
+
+```bash tab="CLI"
+--providers.marathon.tls.cert=path/to/foo.cert
+--providers.marathon.tls.key=path/to/foo.key
+```
+
+#### `tls.insecureSkipVerify`
+
+If `insecureSkipVerify` is `true`, TLS for the connection to Marathon accepts any certificate presented by the server and any host name in that certificate.
+
+```toml tab="File (TOML)"
+[providers.marathon.tls]
   insecureSkipVerify = true
 ```
 
 ```yaml tab="File (YAML)"
 providers:
-  marathon
+  marathon:
     tls:
-      ca: "/etc/ssl/ca.crt"
-      cert: "/etc/ssl/marathon.cert"
-      key: "/etc/ssl/marathon.key"
-      insecureSkipVerify:  true
+      insecureSkipVerify: true
 ```
 
 ```bash tab="CLI"
---providers.marathon.tls.ca="/etc/ssl/ca.crt"
---providers.marathon.tls.cert="/etc/ssl/marathon.cert"
---providers.marathon.tls.key="/etc/ssl/marathon.key"
---providers.marathon.tls.insecureskipverify=true
+--providers.marathon.tls.insecureSkipVerify=true
 ```
-
-TLS client configuration. [tls/#Config](https://golang.org/pkg/crypto/tls/#Config).
 
 ### `tlsHandshakeTimeout`
 
@@ -505,84 +590,3 @@ providers:
 ```
 
 Enables watching for Marathon changes.
-
-## Routing Configuration Options
-
-### General
-
-Traefik creates, for each Marathon application, a corresponding [service](../routing/services/index.md) and [router](../routing/routers/index.md).
-
-The Service automatically gets a server per instance of the application,
-and the router automatically gets a rule defined by defaultRule (if no rule for it was defined in labels).
-
-### Routers
-
-To update the configuration of the Router automatically attached to the application,
-add labels starting with `traefik.http.routers.{router-name-of-your-choice}.` and followed by the option you want to change.
-For example, to change the routing rule, you could add the label ```traefik.http.routers.routername.rule=Host(`my-domain`)```.
-
-Every [Router](../routing/routers/index.md) parameter can be updated this way.
-
-### Services
-
-To update the configuration of the Service automatically attached to the container,
-add labels starting with `traefik.http.services.{service-name-of-your-choice}.`, followed by the option you want to change.
-For example, to change the passHostHeader behavior, you'd add the label `traefik.http.services.servicename.loadbalancer.passhostheader=false`.
-
-Every [Service](../routing/services/index.md) parameter can be updated this way.
-
-### Middleware
-
-You can declare pieces of middleware using labels starting with `traefik.http.middlewares.{middleware-name-of-your-choice}.`, followed by the middleware type/options.
-For example, to declare a middleware [`redirectscheme`](../middlewares/redirectscheme.md) named `my-redirect`, you'd write `traefik.http.middlewares.my-redirect.redirectscheme.scheme: https`.
-
-??? example "Declaring and Referencing a Middleware"
-
-    ```json
-	{
-		...
-		"labels": {
-			"traefik.http.middlewares.my-redirect.redirectscheme.scheme": "https",
-			"traefik.http.routers.my-container.middlewares": "my-redirect"
-		}
-	}
-    ```
-
-!!! warning "Conflicts in Declaration"
-
-    If you declare multiple middleware with the same name but with different parameters, the middleware fails to be declared.
-
-More information about available middlewares in the dedicated [middlewares section](../middlewares/overview.md).
-
-### TCP
-
-You can declare TCP Routers and/or Services using labels.
-
-??? example "Declaring TCP Routers and Services"
-
-    ```json
-	{
-		...
-		"labels": {
-			"traefik.tcp.routers.my-router.rule": "HostSNI(`my-host.com`)",
-			"traefik.tcp.routers.my-router.tls": "true",
-			"traefik.tcp.services.my-service.loadbalancer.server.port": "4123"
-		}
-	}
-    ```
-
-!!! warning "TCP and HTTP"
-
-    If you declare a TCP Router/Service, it will prevent Traefik from automatically creating an HTTP Router/Service (as it would by default if no TCP Router/Service is defined).
-    Both a TCP Router/Service and an HTTP Router/Service can be created for the same application, but it has to be done explicitly in the config.
-
-### Specific Options
-
-#### `traefik.enable`
-
-Setting this option controls whether Traefik exposes the application.
-It overrides the value of `exposedByDefault`.
-
-#### `traefik.marathon.ipadressidx`
-
-If a task has several IP addresses, this option specifies which one, in the list of available addresses, to select.
