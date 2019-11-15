@@ -213,6 +213,9 @@ Buckets for latency metrics. (Default: ```0.100000, 0.300000, 1.200000, 5.000000
 `--metrics.prometheus.entrypoint`:  
 EntryPoint (Default: ```traefik```)
 
+`--metrics.prometheus.manualrouting`:  
+Manual routing (Default: ```false```)
+
 `--metrics.statsd`:  
 StatsD metrics exporter type. (Default: ```false```)
 
@@ -225,6 +228,9 @@ StatsD address. (Default: ```localhost:8125```)
 `--metrics.statsd.addserviceslabels`:  
 Enable metrics on services. (Default: ```true```)
 
+`--metrics.statsd.prefix`:  
+Prefix to use for metrics collection. (Default: ```traefik```)
+
 `--metrics.statsd.pushinterval`:  
 StatsD push interval. (Default: ```10```)
 
@@ -233,6 +239,12 @@ Enable ping. (Default: ```false```)
 
 `--ping.entrypoint`:  
 EntryPoint (Default: ```traefik```)
+
+`--ping.manualrouting`:  
+Manual routing (Default: ```false```)
+
+`--providers.consulcatalog.cache`:  
+Use local agent caching for catalog reads. (Default: ```false```)
 
 `--providers.consulcatalog.constraints`:  
 Constraints is an expression that Traefik matches against the container's labels to determine whether to create any route for that container.
@@ -284,6 +296,12 @@ Prefix for consul service tags. Default 'traefik' (Default: ```traefik```)
 
 `--providers.consulcatalog.refreshinterval`:  
 Interval for check Consul API. Default 100ms (Default: ```15```)
+
+`--providers.consulcatalog.requireconsistent`:  
+Forces the read to be fully consistent. (Default: ```false```)
+
+`--providers.consulcatalog.stale`:  
+Use stale consistency for catalog reads. (Default: ```false```)
 
 `--providers.docker`:  
 Enable Docker backend with default settings. (Default: ```false```)
@@ -580,7 +598,7 @@ Specifies the header name that will be used to store the trace ID.
 Settings for Instana. (Default: ```false```)
 
 `--tracing.instana.localagenthost`:  
-Set instana-agent's host that the reporter will used. (Default: ```localhost```)
+Set instana-agent's host that the reporter will used.
 
 `--tracing.instana.localagentport`:  
 Set instana-agent's port that the reporter will used. (Default: ```42699```)

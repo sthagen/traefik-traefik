@@ -162,7 +162,7 @@ type Providers struct {
 	KubernetesCRD             *crd.Provider           `description:"Enable Kubernetes backend with default settings." json:"kubernetesCRD,omitempty" toml:"kubernetesCRD,omitempty" yaml:"kubernetesCRD,omitempty" export:"true" label:"allowEmpty"`
 	Rest                      *rest.Provider          `description:"Enable Rest backend with default settings." json:"rest,omitempty" toml:"rest,omitempty" yaml:"rest,omitempty" export:"true" label:"allowEmpty"`
 	Rancher                   *rancher.Provider       `description:"Enable Rancher backend with default settings." json:"rancher,omitempty" toml:"rancher,omitempty" yaml:"rancher,omitempty" export:"true" label:"allowEmpty"`
-	ConsulCatalog             *consulcatalog.Provider `description:"Enable ConsulCatalog backend with default settings." json:"consulcatalog,omitempty" toml:"consulcatalog,omitempty" yaml:"consulcatalog,omitempty"`
+	ConsulCatalog             *consulcatalog.Provider `description:"Enable ConsulCatalog backend with default settings." json:"consulCatalog,omitempty" toml:"consulCatalog,omitempty" yaml:"consulCatalog,omitempty"`
 }
 
 // SetEffectiveConfiguration adds missing configuration parameters derived from existing ones.
@@ -177,9 +177,9 @@ func (c *Configuration) SetEffectiveConfiguration() {
 	}
 
 	if (c.API != nil && c.API.Insecure) ||
-		(c.Ping != nil && c.Ping.EntryPoint == DefaultInternalEntryPointName) ||
-		(c.Metrics != nil && c.Metrics.Prometheus != nil && c.Metrics.Prometheus.EntryPoint == DefaultInternalEntryPointName) ||
-		(c.Providers.Rest != nil) {
+		(c.Ping != nil && !c.Ping.ManualRouting && c.Ping.EntryPoint == DefaultInternalEntryPointName) ||
+		(c.Metrics != nil && c.Metrics.Prometheus != nil && !c.Metrics.Prometheus.ManualRouting && c.Metrics.Prometheus.EntryPoint == DefaultInternalEntryPointName) ||
+		(c.Providers != nil && c.Providers.Rest != nil && c.Providers.Rest.Insecure) {
 		if _, ok := c.EntryPoints[DefaultInternalEntryPointName]; !ok {
 			ep := &EntryPoint{Address: ":8080"}
 			ep.SetDefaults()

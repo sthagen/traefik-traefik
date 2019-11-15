@@ -108,19 +108,22 @@
     refreshSeconds = 42
     intervalPoll = true
     prefix = "foobar"
-  [providers.consulcatalog]
+  [providers.consulCatalog]
     constraints = "foobar"
     prefix = "traefik"
     defaultRule = "foobar"
     exposedByDefault = true
     refreshInterval = 15
-    [providers.consulcatalog.endpoint]
+    requireConsistent = true
+    stale = true
+    cache = true
+    [providers.consulCatalog.endpoint]
      address = "foobar"
      scheme = "foobar"
      datacenter = "foobar"
      token = "foobar"
      endpointWaitTime = "15s"
-     [providers.consulcatalog.endpoint.tls]
+     [providers.consulCatalog.endpoint.tls]
       ca = "foobar"
       caOptional = true
       cert = "foobar"
@@ -138,6 +141,7 @@
     addEntryPointsLabels = true
     addServicesLabels = true
     entryPoint = "foobar"
+    manualRouting = true
   [metrics.datadog]
     address = "foobar"
     pushInterval = "10s"
@@ -148,6 +152,7 @@
     pushInterval = "10s"
     addEntryPointsLabels = true
     addServicesLabels = true
+    prefix = "traefik"
   [metrics.influxDB]
     address = "foobar"
     protocol = "foobar"
@@ -161,6 +166,7 @@
 
 [ping]
   entryPoint = "foobar"
+  manualRouting = true
 
 [log]
   level = "foobar"

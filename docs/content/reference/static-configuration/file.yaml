@@ -115,12 +115,15 @@ providers:
     refreshSeconds: 42
     intervalPoll: true
     prefix: foobar
-  consulcatalog:
+  consulCatalog:
     constraints: foobar
     prefix: traefik
     defaultRule: foobar
     exposedByDefault: true
     refreshInterval: 15
+    requireConsistent: true
+    stale: true
+    cache: true
     endpoint:
       address: foobar
       scheme: foobar
@@ -145,6 +148,7 @@ metrics:
     addEntryPointsLabels: true
     addServicesLabels: true
     entryPoint: foobar
+    manualRouting: true
   datadog:
     address: foobar
     pushInterval: 42
@@ -155,6 +159,7 @@ metrics:
     pushInterval: 42
     addEntryPointsLabels: true
     addServicesLabels: true
+    prefix: traefik
   influxDB:
     address: foobar
     protocol: foobar
@@ -167,6 +172,7 @@ metrics:
     addServicesLabels: true
 ping:
   entryPoint: foobar
+  manualRouting: true
 log:
   level: foobar
   filePath: foobar

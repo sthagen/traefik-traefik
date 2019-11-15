@@ -349,7 +349,11 @@ tls:
   options:
     Options0:
       minVersion: foobar
+      maxVersion: foobar
       cipherSuites:
+        - foobar
+        - foobar
+      curvePreferences:
         - foobar
         - foobar
       clientAuth:
@@ -360,7 +364,11 @@ tls:
       sniStrict: true
     Options1:
       minVersion: foobar
+      maxVersion: foobar
       cipherSuites:
+        - foobar
+        - foobar
+      curvePreferences:
         - foobar
         - foobar
       clientAuth:
