@@ -1,3 +1,59 @@
+## [v2.1.0-rc2](https://github.com/containous/traefik/tree/v2.0.4) (2019-11-15)
+[All Commits](https://github.com/containous/traefik/compare/v2.0.0-rc1...v2.1.0-rc2)
+
+Fixes int overflow.
+Same changelog as v2.1.0-rc1
+
+## [v2.1.0-rc1](https://github.com/containous/traefik/tree/v2.1.0-rc1) (2019-11-15)
+[All Commits](https://github.com/containous/traefik/compare/v2.0.0-rc1...v2.1.0-rc1)
+
+**Enhancements:**
+- **[consulcatalog]** Add consul catalog options: requireConsistent, stale, cache ([#5752](https://github.com/containous/traefik/pull/5752) by [ldez](https://github.com/ldez))
+- **[consulcatalog]** Add Consul Catalog provider ([#5395](https://github.com/containous/traefik/pull/5395) by [negasus](https://github.com/negasus))
+- **[k8s,k8s/crd,service]** Support for all services kinds (and sticky) in CRD ([#5711](https://github.com/containous/traefik/pull/5711) by [mpl](https://github.com/mpl))
+- **[metrics]** Added configurable prefix for statsd metrics collection ([#5336](https://github.com/containous/traefik/pull/5336) by [schulterklopfer](https://github.com/schulterklopfer))
+- **[middleware]** Conditional compression based on request Content-Type ([#5721](https://github.com/containous/traefik/pull/5721) by [ldez](https://github.com/ldez))
+- **[server]** Add internal provider ([#5815](https://github.com/containous/traefik/pull/5815) by [ldez](https://github.com/ldez))
+- **[tls]** Add support for MaxVersion in tls.Options ([#5650](https://github.com/containous/traefik/pull/5650) by [kmeekva](https://github.com/kmeekva))
+- **[tls]** Add tls option for Elliptic Curve Preferences ([#5466](https://github.com/containous/traefik/pull/5466) by [ksarink](https://github.com/ksarink))
+- **[tracing]** Update jaeger dependencies ([#5637](https://github.com/containous/traefik/pull/5637) by [mmatur](https://github.com/mmatur))
+
+**Bug fixes:**
+- **[consulcatalog]** Fix empty address for registering service without IP ([#5826](https://github.com/containous/traefik/pull/5826) by [mmatur](https://github.com/mmatur))
+
+**Documentation:**
+- **[consulcatalog]** fix: Consul Catalog documentation. ([#5725](https://github.com/containous/traefik/pull/5725) by [ldez](https://github.com/ldez))
+- **[consulcatalog]** Fix consul catalog documentation ([#5661](https://github.com/containous/traefik/pull/5661) by [mmatur](https://github.com/mmatur))
+
+**Misc:**
+- Merge current v2.0 branch into master  ([#5749](https://github.com/containous/traefik/pull/5749) by [ldez](https://github.com/ldez))
+- Merge current v2.0 branch into master  ([#5619](https://github.com/containous/traefik/pull/5619) by [ldez](https://github.com/ldez))
+- Merge current v2.0 branch into master  ([#5464](https://github.com/containous/traefik/pull/5464) by [ldez](https://github.com/ldez))
+- Merge v2.0.0 into master ([#5402](https://github.com/containous/traefik/pull/5402) by [ldez](https://github.com/ldez))
+- Merge v2.0.0-rc3 into master ([#5354](https://github.com/containous/traefik/pull/5354) by [ldez](https://github.com/ldez))
+- Merge v2.0.0-rc1 into master  ([#5253](https://github.com/containous/traefik/pull/5253) by [ldez](https://github.com/ldez))
+
+## [v2.0.5](https://github.com/containous/traefik/tree/v2.0.5) (2019-11-14)
+[All Commits](https://github.com/containous/traefik/compare/v2.0.4...v2.0.5)
+
+**Bug fixes:**
+- **[metrics]** fix: metric with services LB. ([#5759](https://github.com/containous/traefik/pull/5759) by [ldez](https://github.com/ldez))
+- **[middleware]** fix: stripPrefix middleware with empty resulting path. ([#5806](https://github.com/containous/traefik/pull/5806) by [ldez](https://github.com/ldez))
+- **[middleware]** Fix rate limiting and SSE ([#5737](https://github.com/containous/traefik/pull/5737) by [sylr](https://github.com/sylr))
+- **[tracing]** Upgrades zipkin library to avoid errors when using textMap. ([#5754](https://github.com/containous/traefik/pull/5754) by [jcchavezs](https://github.com/jcchavezs))
+
+**Documentation:**
+- **[acme,cluster]** Update ACME storage docs to remove reference to KV store in CE ([#5433](https://github.com/containous/traefik/pull/5433) by [bradjones1](https://github.com/bradjones1))
+- **[api]** docs: remove field api.entryPoint ([#5776](https://github.com/containous/traefik/pull/5776) by [waitingsong](https://github.com/waitingsong))
+- **[api]** Adds missed quotes in api.md ([#5787](https://github.com/containous/traefik/pull/5787) by [woto](https://github.com/woto))
+- **[docker/swarm]** Dashboard example with swarm ([#5795](https://github.com/containous/traefik/pull/5795) by [dduportal](https://github.com/dduportal))
+- **[docker]** Fix error in link description for priority ([#5746](https://github.com/containous/traefik/pull/5746) by [ASDFGamer](https://github.com/ASDFGamer))
+- **[k8s]** Wrong endpoint on the TLS secret example ([#5817](https://github.com/containous/traefik/pull/5817) by [yacinelazaar](https://github.com/yacinelazaar))
+- **[middleware,docker]** Double dollar on docker-compose config ([#5775](https://github.com/containous/traefik/pull/5775) by [clery](https://github.com/clery))
+- Fix quickstart link in README ([#5794](https://github.com/containous/traefik/pull/5794) by [mcky](https://github.com/mcky))
+- fix typo in v1 to v2 migration guide ([#5820](https://github.com/containous/traefik/pull/5820) by [fschl](https://github.com/fschl))
+- slashes ended up in bad place. ([#5798](https://github.com/containous/traefik/pull/5798) by [icepic](https://github.com/icepic))
+
 ## [v2.0.4](https://github.com/containous/traefik/tree/v2.0.4) (2019-10-28)
 [All Commits](https://github.com/containous/traefik/compare/v2.0.3...v2.0.4)
 
