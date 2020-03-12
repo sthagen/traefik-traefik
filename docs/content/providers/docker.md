@@ -261,7 +261,7 @@ See the sections [Docker API Access](#docker-api-access) and [Docker Swarm API A
 
     services:
       traefik:
-         image: traefik:v2.1 # The official v2 Traefik docker image
+         image: traefik:v2.2 # The official v2 Traefik docker image
          ports:
            - "80:80"
          volumes:
@@ -473,19 +473,19 @@ _Optional, Default=15_
 
 ```toml tab="File (TOML)"
 [providers.docker]
-  swarmModeRefreshSeconds = "30s"
+  swarmModeRefreshSeconds = 30
   # ...
 ```
 
 ```yaml tab="File (YAML)"
 providers:
   docker:
-    swarmModeRefreshSeconds: "30s"
+    swarmModeRefreshSeconds: 30
     # ...
 ```
 
 ```bash tab="CLI"
---providers.docker.swarmModeRefreshSeconds=30s
+--providers.docker.swarmModeRefreshSeconds=30
 # ...
 ```
 
