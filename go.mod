@@ -36,13 +36,11 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect
 	github.com/gambol99/go-marathon v0.0.0-20180614232016-99a156b96fb2
-	github.com/go-acme/lego/v3 v3.6.0
+	github.com/go-acme/lego/v3 v3.7.0
 	github.com/go-check/check v0.0.0-00010101000000-000000000000
 	github.com/go-kit/kit v0.9.0
-	github.com/gogo/protobuf v1.3.0 // indirect
 	github.com/golang/protobuf v1.3.4
 	github.com/google/go-github/v28 v28.1.1
-	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/consul/api v1.3.0
@@ -91,10 +89,10 @@ require (
 	gopkg.in/fsnotify.v1 v1.4.7
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/api v0.17.3
-	k8s.io/apimachinery v0.17.3
-	k8s.io/client-go v0.17.3
-	k8s.io/code-generator v0.17.3
+	k8s.io/api v0.18.2
+	k8s.io/apimachinery v0.18.2
+	k8s.io/client-go v0.18.2
+	k8s.io/code-generator v0.18.2
 	mvdan.cc/xurls/v2 v2.1.0
 )
 
