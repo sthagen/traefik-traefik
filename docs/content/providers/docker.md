@@ -154,7 +154,7 @@ You can specify which Docker API Endpoint to use with the directive [`endpoint`]
 
         - Authentication with Client Certificates as described in ["Protect the Docker daemon socket."](https://docs.docker.com/engine/security/https/)
         - Authorize and filter requests to restrict possible actions with [the TecnativaDocker Socket Proxy](https://github.com/Tecnativa/docker-socket-proxy).
-        - Authorization with the [Docker Authorization Plugin Mechanism](https://docs.docker.com/engine/extend/plugins_authorization/)
+        - Authorization with the [Docker Authorization Plugin Mechanism](https://web.archive.org/web/20190920092526/https://docs.docker.com/engine/extend/plugins_authorization/)
         - Accounting at networking level, by exposing the socket only inside a Docker private network, only available for Traefik.
         - Accounting at container level, by exposing the socket on a another container than Traefik's.
           With Swarm mode, it allows scheduling of Traefik on worker nodes, with only the "socket exposer" container on the manager nodes.
@@ -261,7 +261,7 @@ See the sections [Docker API Access](#docker-api-access) and [Docker Swarm API A
 
     services:
       traefik:
-         image: traefik:v2.2 # The official v2 Traefik docker image
+         image: traefik:v2.3 # The official v2 Traefik docker image
          ports:
            - "80:80"
          volumes:

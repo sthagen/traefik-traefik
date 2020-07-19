@@ -27,10 +27,8 @@ import (
 	"github.com/go-acme/lego/v3/registration"
 )
 
-var (
-	// oscpMustStaple enables OSCP stapling as from https://github.com/go-acme/lego/issues/270.
-	oscpMustStaple = false
-)
+// oscpMustStaple enables OSCP stapling as from https://github.com/go-acme/lego/issues/270.
+var oscpMustStaple = false
 
 // Configuration holds ACME configuration provided by users.
 type Configuration struct {
@@ -38,9 +36,9 @@ type Configuration struct {
 	CAServer      string         `description:"CA server to use." json:"caServer,omitempty" toml:"caServer,omitempty" yaml:"caServer,omitempty"`
 	Storage       string         `description:"Storage to use." json:"storage,omitempty" toml:"storage,omitempty" yaml:"storage,omitempty"`
 	KeyType       string         `description:"KeyType used for generating certificate private key. Allow value 'EC256', 'EC384', 'RSA2048', 'RSA4096', 'RSA8192'." json:"keyType,omitempty" toml:"keyType,omitempty" yaml:"keyType,omitempty"`
-	DNSChallenge  *DNSChallenge  `description:"Activate DNS-01 Challenge." json:"dnsChallenge,omitempty" toml:"dnsChallenge,omitempty" yaml:"dnsChallenge,omitempty" label:"allowEmpty"`
-	HTTPChallenge *HTTPChallenge `description:"Activate HTTP-01 Challenge." json:"httpChallenge,omitempty" toml:"httpChallenge,omitempty" yaml:"httpChallenge,omitempty" label:"allowEmpty"`
-	TLSChallenge  *TLSChallenge  `description:"Activate TLS-ALPN-01 Challenge." json:"tlsChallenge,omitempty" toml:"tlsChallenge,omitempty" yaml:"tlsChallenge,omitempty" label:"allowEmpty"`
+	DNSChallenge  *DNSChallenge  `description:"Activate DNS-01 Challenge." json:"dnsChallenge,omitempty" toml:"dnsChallenge,omitempty" yaml:"dnsChallenge,omitempty" label:"allowEmpty" file:"allowEmpty"`
+	HTTPChallenge *HTTPChallenge `description:"Activate HTTP-01 Challenge." json:"httpChallenge,omitempty" toml:"httpChallenge,omitempty" yaml:"httpChallenge,omitempty" label:"allowEmpty" file:"allowEmpty"`
+	TLSChallenge  *TLSChallenge  `description:"Activate TLS-ALPN-01 Challenge." json:"tlsChallenge,omitempty" toml:"tlsChallenge,omitempty" yaml:"tlsChallenge,omitempty" label:"allowEmpty" file:"allowEmpty"`
 }
 
 // SetDefaults sets the default values.
@@ -145,7 +143,7 @@ func (p *Provider) Init() error {
 	return nil
 }
 
-func isAccountMatchingCaServer(ctx context.Context, accountURI string, serverURI string) bool {
+func isAccountMatchingCaServer(ctx context.Context, accountURI, serverURI string) bool {
 	logger := log.FromContext(ctx)
 
 	aru, err := url.Parse(accountURI)
@@ -428,13 +426,11 @@ func (p *Provider) resolveCertificate(ctx context.Context, domain types.Domain, 
 		return nil, err
 	}
 
-	// Check provided certificates
+	// Check if provided certificates are not already in progress and lock them if needed
 	uncheckedDomains := p.getUncheckedDomains(ctx, domains, tlsStore)
 	if len(uncheckedDomains) == 0 {
 		return nil, nil
 	}
-
-	p.addResolvingDomains(uncheckedDomains)
 	defer p.removeResolvingDomains(uncheckedDomains)
 
 	logger := log.FromContext(ctx)
@@ -483,16 +479,7 @@ func (p *Provider) removeResolvingDomains(resolvingDomains []string) {
 	}
 }
 
-func (p *Provider) addResolvingDomains(resolvingDomains []string) {
-	p.resolvingDomainsMutex.Lock()
-	defer p.resolvingDomainsMutex.Unlock()
-
-	for _, domain := range resolvingDomains {
-		p.resolvingDomains[domain] = struct{}{}
-	}
-}
-
-func (p *Provider) addCertificateForDomain(domain types.Domain, certificate []byte, key []byte, tlsStore string) {
+func (p *Provider) addCertificateForDomain(domain types.Domain, certificate, key []byte, tlsStore string) {
 	p.certsChan <- &CertAndStore{Certificate: Certificate{Certificate: certificate, Key: key, Domain: domain}, Store: tlsStore}
 }
 
@@ -640,7 +627,6 @@ func (p *Provider) renewCertificates(ctx context.Context) {
 				PrivateKey:  cert.Key,
 				Certificate: cert.Certificate.Certificate,
 			}, true, oscpMustStaple)
-
 			if err != nil {
 				logger.Errorf("Error renewing certificate from LE: %v, %v", cert.Domain, err)
 				continue
@@ -659,8 +645,8 @@ func (p *Provider) renewCertificates(ctx context.Context) {
 // Get provided certificate which check a domains list (Main and SANs)
 // from static and dynamic provided certificates.
 func (p *Provider) getUncheckedDomains(ctx context.Context, domainsToCheck []string, tlsStore string) []string {
-	p.resolvingDomainsMutex.RLock()
-	defer p.resolvingDomainsMutex.RUnlock()
+	p.resolvingDomainsMutex.Lock()
+	defer p.resolvingDomainsMutex.Unlock()
 
 	log.FromContext(ctx).Debugf("Looking for provided certificate(s) to validate %q...", domainsToCheck)
 
@@ -676,10 +662,17 @@ func (p *Provider) getUncheckedDomains(ctx context.Context, domainsToCheck []str
 		allDomains = append(allDomains, domain)
 	}
 
-	return searchUncheckedDomains(ctx, domainsToCheck, allDomains)
+	uncheckedDomains := searchUncheckedDomains(ctx, domainsToCheck, allDomains)
+
+	// Lock domains that will be resolved by this routine
+	for _, domain := range uncheckedDomains {
+		p.resolvingDomains[domain] = struct{}{}
+	}
+
+	return uncheckedDomains
 }
 
-func searchUncheckedDomains(ctx context.Context, domainsToCheck []string, existentDomains []string) []string {
+func searchUncheckedDomains(ctx context.Context, domainsToCheck, existentDomains []string) []string {
 	var uncheckedDomains []string
 	for _, domainToCheck := range domainsToCheck {
 		if !isDomainAlreadyChecked(domainToCheck, existentDomains) {

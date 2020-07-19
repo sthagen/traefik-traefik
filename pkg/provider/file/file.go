@@ -11,15 +11,14 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig"
 	"github.com/containous/traefik/v2/pkg/config/dynamic"
+	"github.com/containous/traefik/v2/pkg/config/file"
 	"github.com/containous/traefik/v2/pkg/log"
 	"github.com/containous/traefik/v2/pkg/provider"
 	"github.com/containous/traefik/v2/pkg/safe"
 	"github.com/containous/traefik/v2/pkg/tls"
 	"gopkg.in/fsnotify.v1"
-	"gopkg.in/yaml.v2"
 )
 
 const providerName = "file"
@@ -49,7 +48,6 @@ func (p *Provider) Init() error {
 // using the given configuration channel.
 func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.Pool) error {
 	configuration, err := p.BuildConfiguration()
-
 	if err != nil {
 		return err
 	}
@@ -357,7 +355,7 @@ func (p *Provider) CreateConfiguration(ctx context.Context, filename string, fun
 		return nil, fmt.Errorf("error reading configuration file: %s - %w", filename, err)
 	}
 
-	var defaultFuncMap = sprig.TxtFuncMap()
+	defaultFuncMap := sprig.TxtFuncMap()
 	defaultFuncMap["normalize"] = provider.Normalize
 	defaultFuncMap["split"] = strings.Split
 	for funcID, funcElement := range funcMap {
@@ -377,7 +375,7 @@ func (p *Provider) CreateConfiguration(ctx context.Context, filename string, fun
 		return nil, err
 	}
 
-	var renderedTemplate = buffer.String()
+	renderedTemplate := buffer.String()
 	if p.DebugLogGeneratedTemplate {
 		logger := log.FromContext(ctx)
 		logger.Debugf("Template content: %s", tmplContent)
@@ -397,7 +395,7 @@ func (p *Provider) DecodeConfiguration(filename string) (*dynamic.Configuration,
 	return p.decodeConfiguration(filename, content)
 }
 
-func (p *Provider) decodeConfiguration(filePath string, content string) (*dynamic.Configuration, error) {
+func (p *Provider) decodeConfiguration(filePath, content string) (*dynamic.Configuration, error) {
 	configuration := &dynamic.Configuration{
 		HTTP: &dynamic.HTTPConfiguration{
 			Routers:     make(map[string]*dynamic.Router),
@@ -418,22 +416,9 @@ func (p *Provider) decodeConfiguration(filePath string, content string) (*dynami
 		},
 	}
 
-	switch strings.ToLower(filepath.Ext(filePath)) {
-	case ".toml":
-		_, err := toml.Decode(content, configuration)
-		if err != nil {
-			return nil, err
-		}
-
-	case ".yml", ".yaml":
-		var err error
-		err = yaml.Unmarshal([]byte(content), configuration)
-		if err != nil {
-			return nil, err
-		}
-
-	default:
-		return nil, fmt.Errorf("unsupported file extension: %s", filePath)
+	err := file.DecodeContent(content, strings.ToLower(filepath.Ext(filePath)), configuration)
+	if err != nil {
+		return nil, err
 	}
 
 	return configuration, nil
