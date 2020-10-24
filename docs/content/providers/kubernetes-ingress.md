@@ -65,11 +65,11 @@ When using a single instance of Traefik with LetsEncrypt, no issues should be en
 however this could be a single point of failure.
 Unfortunately, it is not possible to run multiple instances of Traefik 2.0 with LetsEncrypt enabled,
 because there is no way to ensure that the correct instance of Traefik will receive the challenge request, and subsequent responses.
-Previous versions of Traefik used a [KV store](https://docs.traefik.io/v1.7/configuration/acme/#storage) to attempt to achieve this,
+Previous versions of Traefik used a [KV store](https://doc.traefik.io/traefik/v1.7/configuration/acme/#storage) to attempt to achieve this,
 but due to sub-optimal performance was dropped as a feature in 2.0.
 
 If you require LetsEncrypt with HA in a kubernetes environment,
-we recommend using [TraefikEE](https://containo.us/traefikee/) where distributed LetsEncrypt is a supported feature.
+we recommend using [Traefik Enterprise](https://traefik.io/traefik-enterprise/) where distributed LetsEncrypt is a supported feature.
 
 If you are wanting to continue to run Traefik Community Edition,
 LetsEncrypt HA can be achieved by using a Certificate Controller such as [Cert-Manager](https://docs.cert-manager.io/en/latest/index.html).
@@ -91,7 +91,7 @@ _Optional, Default=empty_
 ```yaml tab="File (YAML)"
 providers:
   kubernetesIngress:
-    endpoint = "http://localhost:8080"
+    endpoint: "http://localhost:8080"
     # ...
 ```
 
@@ -124,7 +124,7 @@ _Optional, Default=empty_
 ```yaml tab="File (YAML)"
 providers:
   kubernetesIngress:
-    token = "mytoken"
+    token: "mytoken"
     # ...
 ```
 
@@ -264,7 +264,33 @@ Otherwise, Ingresses missing the annotation, having an empty value, or with the 
     the new `IngressClass` resource can be leveraged to identify Ingress objects that should be processed.
     In that case, Traefik will look for an `IngressClass` in the cluster with the controller value equal to *traefik.io/ingress-controller*. 
     
-    Please see [this article](https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/) for more information.
+    Please see [this article](https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/) for more information or the example below.
+
+    ```yaml tab="IngressClass"
+    apiVersion: networking.k8s.io/v1beta1
+    kind: IngressClass
+    metadata: 
+      name: traefik-lb
+    spec: 
+      controller: traefik.io/ingress-controller
+    ```
+  
+    ```yaml tab="Ingress"
+    apiVersion: "networking.k8s.io/v1beta1"
+    kind: "Ingress"
+    metadata:
+      name: "example-ingress"
+    spec:
+      ingressClassName: "traefik-lb"
+      rules:
+      - host: "*.example.com"
+        http:
+          paths:
+          - path: "/example"
+            backend:
+              serviceName: "example-service"
+              servicePort: 80
+    ```
 
 ### `ingressEndpoint`
 
@@ -365,4 +391,4 @@ providers:
 ### Further
 
 If one wants to know more about the various aspects of the Ingress spec that Traefik supports,
-many examples of Ingresses definitions are located in the tests [data](https://github.com/containous/traefik/tree/v2.3/pkg/provider/kubernetes/ingress/fixtures) of the Traefik repository.
+many examples of Ingresses definitions are located in the tests [data](https://github.com/traefik/traefik/tree/v2.3/pkg/provider/kubernetes/ingress/fixtures) of the Traefik repository.

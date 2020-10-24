@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016-2020 Containous SAS
+Copyright (c) 2016-2020 Containous SAS; 2020-2020 Traefik Labs
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ THE SOFTWARE.
 package v1alpha1
 
 import (
-	internalinterfaces "github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/generated/informers/externalversions/internalinterfaces"
+	internalinterfaces "github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/generated/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.
@@ -40,6 +40,8 @@ type Interface interface {
 	IngressRouteUDPs() IngressRouteUDPInformer
 	// Middlewares returns a MiddlewareInformer.
 	Middlewares() MiddlewareInformer
+	// ServersTransports returns a ServersTransportInformer.
+	ServersTransports() ServersTransportInformer
 	// TLSOptions returns a TLSOptionInformer.
 	TLSOptions() TLSOptionInformer
 	// TLSStores returns a TLSStoreInformer.
@@ -77,6 +79,11 @@ func (v *version) IngressRouteUDPs() IngressRouteUDPInformer {
 // Middlewares returns a MiddlewareInformer.
 func (v *version) Middlewares() MiddlewareInformer {
 	return &middlewareInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ServersTransports returns a ServersTransportInformer.
+func (v *version) ServersTransports() ServersTransportInformer {
+	return &serversTransportInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // TLSOptions returns a TLSOptionInformer.

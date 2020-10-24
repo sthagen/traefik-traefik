@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containous/traefik/v2/pkg/config/runtime"
-	"github.com/containous/traefik/v2/pkg/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/traefik/traefik/v2/pkg/config/runtime"
+	"github.com/traefik/traefik/v2/pkg/testhelpers"
 	"github.com/vulcand/oxy/roundrobin"
 )
 
@@ -120,10 +120,10 @@ func TestSetBackendsConfiguration(t *testing.T) {
 				backend.disabledURLs = append(backend.disabledURLs, backendURL{url: serverURL, weight: 1})
 			}
 
-			collectingMetrics := testhelpers.NewCollectingHealthCheckMetrics()
+			collectingMetrics := &testhelpers.CollectingGauge{}
 			check := HealthCheck{
 				Backends: make(map[string]*BackendConfig),
-				metrics:  collectingMetrics,
+				metrics:  metricsHealthcheck{serverUpGauge: collectingMetrics},
 			}
 
 			wg := sync.WaitGroup{}
@@ -149,8 +149,7 @@ func TestSetBackendsConfiguration(t *testing.T) {
 
 			assert.Equal(t, test.expectedNumRemovedServers, lb.numRemovedServers, "removed servers")
 			assert.Equal(t, test.expectedNumUpsertedServers, lb.numUpsertedServers, "upserted servers")
-			// FIXME re add metrics
-			// assert.Equal(t, test.expectedGaugeValue, collectingMetrics.Gauge.GaugeValue, "ServerUp Gauge")
+			assert.Equal(t, test.expectedGaugeValue, collectingMetrics.GaugeValue, "ServerUp Gauge")
 		})
 	}
 }
@@ -502,9 +501,10 @@ func TestNotFollowingRedirects(t *testing.T) {
 		FollowRedirects: false,
 	}, "backendName")
 
+	collectingMetrics := &testhelpers.CollectingGauge{}
 	check := HealthCheck{
 		Backends: make(map[string]*BackendConfig),
-		metrics:  testhelpers.NewCollectingHealthCheckMetrics(),
+		metrics:  metricsHealthcheck{serverUpGauge: collectingMetrics},
 	}
 
 	wg := sync.WaitGroup{}

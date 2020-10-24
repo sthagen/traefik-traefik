@@ -5,14 +5,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/containous/traefik/v2/pkg/log"
+	"github.com/traefik/traefik/v2/pkg/log"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // MustParseYaml parses a YAML to objects.
 func MustParseYaml(content []byte) []runtime.Object {
-	acceptedK8sTypes := regexp.MustCompile(`^(Deployment|Endpoints|Service|Ingress|IngressRoute|IngressRouteTCP|IngressRouteUDP|Middleware|Secret|TLSOption|TLSStore|TraefikService|IngressClass)$`)
+	acceptedK8sTypes := regexp.MustCompile(`^(Deployment|Endpoints|Service|Ingress|IngressRoute|IngressRouteTCP|IngressRouteUDP|Middleware|Secret|TLSOption|TLSStore|TraefikService|IngressClass|ServersTransport)$`)
 
 	files := strings.Split(string(content), "---")
 	retVal := make([]runtime.Object, 0, len(files))

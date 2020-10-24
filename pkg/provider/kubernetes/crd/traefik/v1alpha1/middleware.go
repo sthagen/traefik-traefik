@@ -1,7 +1,7 @@
 package v1alpha1
 
 import (
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -88,6 +88,7 @@ type ForwardAuth struct {
 	Address             string     `json:"address,omitempty"`
 	TrustForwardHeader  bool       `json:"trustForwardHeader,omitempty"`
 	AuthResponseHeaders []string   `json:"authResponseHeaders,omitempty"`
+	AuthRequestHeaders  []string   `json:"authRequestHeaders,omitempty"`
 	TLS                 *ClientTLS `json:"tls,omitempty"`
 }
 

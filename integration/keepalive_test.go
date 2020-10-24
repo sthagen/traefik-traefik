@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/containous/traefik/v2/integration/try"
 	"github.com/go-check/check"
+	"github.com/traefik/traefik/v2/integration/try"
 	checker "github.com/vdemeester/shakers"
 )
 
@@ -95,7 +95,11 @@ func (s *KeepAliveSuite) TestShouldRespectConfiguredBackendHttpKeepAliveTime(c *
 
 	err := cmd.Start()
 	c.Check(err, checker.IsNil)
-	defer cmd.Process.Kill()
+	defer s.killCmd(cmd)
+
+	// Wait for Traefik
+	err = try.GetRequest("http://127.0.0.1:8080/api/rawdata", time.Duration(1)*time.Second, try.StatusCodeIs(200), try.BodyContains("PathPrefix(`/keepalive`)"))
+	c.Check(err, checker.IsNil)
 
 	err = try.GetRequest("http://127.0.0.1:8000/keepalive", time.Duration(1)*time.Second, try.StatusCodeIs(200))
 	c.Check(err, checker.IsNil)

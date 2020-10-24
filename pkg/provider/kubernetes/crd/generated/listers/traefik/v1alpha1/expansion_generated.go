@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016-2020 Containous SAS
+Copyright (c) 2016-2020 Containous SAS; 2020-2020 Traefik Labs
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -57,6 +57,14 @@ type MiddlewareListerExpansion interface{}
 // MiddlewareNamespaceListerExpansion allows custom methods to be added to
 // MiddlewareNamespaceLister.
 type MiddlewareNamespaceListerExpansion interface{}
+
+// ServersTransportListerExpansion allows custom methods to be added to
+// ServersTransportLister.
+type ServersTransportListerExpansion interface{}
+
+// ServersTransportNamespaceListerExpansion allows custom methods to be added to
+// ServersTransportNamespaceLister.
+type ServersTransportNamespaceListerExpansion interface{}
 
 // TLSOptionListerExpansion allows custom methods to be added to
 // TLSOptionLister.

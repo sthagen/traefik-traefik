@@ -81,6 +81,9 @@ HTTP challenge EntryPoint
 `--certificatesresolvers.<name>.acme.keytype`:  
 KeyType used for generating certificate private key. Allow value 'EC256', 'EC384', 'RSA2048', 'RSA4096', 'RSA8192'. (Default: ```RSA4096```)
 
+`--certificatesresolvers.<name>.acme.preferredchain`:  
+Preferred chain to use.
+
 `--certificatesresolvers.<name>.acme.storage`:  
 Storage to use. (Default: ```acme.json```)
 
@@ -164,9 +167,6 @@ plugin's GOPATH.
 
 `--experimental.devplugin.modulename`:  
 plugin's module name.
-
-`--experimental.pilot.token`:  
-Traefik Pilot token.
 
 `--experimental.plugins.<name>.modulename`:  
 plugin's module name.
@@ -285,6 +285,9 @@ Prefix to use for metrics collection. (Default: ```traefik```)
 `--metrics.statsd.pushinterval`:  
 StatsD push interval. (Default: ```10```)
 
+`--pilot.token`:  
+Traefik Pilot token.
+
 `--ping`:  
 Enable ping. (Default: ```false```)
 
@@ -337,7 +340,7 @@ Constraints is an expression that Traefik matches against the container's labels
 Default rule. (Default: ```Host(`{{ normalize .Name }}`)```)
 
 `--providers.consulcatalog.endpoint.address`:  
-The address of the Consul server (Default: ```http://127.0.0.1:8500```)
+The address of the Consul server (Default: ```127.0.0.1:8500```)
 
 `--providers.consulcatalog.endpoint.datacenter`:  
 Data center to use. If not provided, the default agent data center is used
@@ -401,6 +404,9 @@ Docker server endpoint. Can be a tcp or a unix socket endpoint. (Default: ```uni
 
 `--providers.docker.exposedbydefault`:  
 Expose containers by default. (Default: ```true```)
+
+`--providers.docker.httpclienttimeout`:  
+Client timeout for HTTP connections. (Default: ```0```)
 
 `--providers.docker.network`:  
 Default Docker network used.
@@ -857,6 +863,9 @@ Password for basic http authentication when sending spans to jaeger-collector.
 
 `--tracing.jaeger.collector.user`:  
 User for basic http authentication when sending spans to jaeger-collector.
+
+`--tracing.jaeger.disableattemptreconnecting`:  
+Disable the periodic re-resolution of the agent's hostname and reconnection if there was a change. (Default: ```true```)
 
 `--tracing.jaeger.gen128bit`:  
 Generate 128 bit span IDs. (Default: ```false```)

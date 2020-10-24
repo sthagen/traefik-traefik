@@ -5,22 +5,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containous/traefik/v2/pkg/config/static"
-	"github.com/containous/traefik/v2/pkg/ping"
-	"github.com/containous/traefik/v2/pkg/provider/acme"
-	acmeprovider "github.com/containous/traefik/v2/pkg/provider/acme"
-	"github.com/containous/traefik/v2/pkg/provider/docker"
-	"github.com/containous/traefik/v2/pkg/provider/file"
-	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd"
-	"github.com/containous/traefik/v2/pkg/provider/kubernetes/ingress"
-	traefiktls "github.com/containous/traefik/v2/pkg/tls"
-	"github.com/containous/traefik/v2/pkg/tracing/datadog"
-	"github.com/containous/traefik/v2/pkg/tracing/haystack"
-	"github.com/containous/traefik/v2/pkg/tracing/instana"
-	"github.com/containous/traefik/v2/pkg/tracing/jaeger"
-	"github.com/containous/traefik/v2/pkg/tracing/zipkin"
-	"github.com/containous/traefik/v2/pkg/types"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
+	ptypes "github.com/traefik/paerser/types"
+	"github.com/traefik/traefik/v2/pkg/config/static"
+	"github.com/traefik/traefik/v2/pkg/ping"
+	"github.com/traefik/traefik/v2/pkg/provider/acme"
+	"github.com/traefik/traefik/v2/pkg/provider/docker"
+	"github.com/traefik/traefik/v2/pkg/provider/file"
+	"github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd"
+	"github.com/traefik/traefik/v2/pkg/provider/kubernetes/ingress"
+	traefiktls "github.com/traefik/traefik/v2/pkg/tls"
+	"github.com/traefik/traefik/v2/pkg/tracing/datadog"
+	"github.com/traefik/traefik/v2/pkg/tracing/haystack"
+	"github.com/traefik/traefik/v2/pkg/tracing/instana"
+	"github.com/traefik/traefik/v2/pkg/tracing/jaeger"
+	"github.com/traefik/traefik/v2/pkg/tracing/zipkin"
+	"github.com/traefik/traefik/v2/pkg/types"
 )
 
 func TestDo_globalConfiguration(t *testing.T) {
@@ -65,9 +65,9 @@ func TestDo_globalConfiguration(t *testing.T) {
 			Address: "foo Address",
 			Transport: &static.EntryPointsTransport{
 				RespondingTimeouts: &static.RespondingTimeouts{
-					ReadTimeout:  types.Duration(111 * time.Second),
-					WriteTimeout: types.Duration(111 * time.Second),
-					IdleTimeout:  types.Duration(111 * time.Second),
+					ReadTimeout:  ptypes.Duration(111 * time.Second),
+					WriteTimeout: ptypes.Duration(111 * time.Second),
+					IdleTimeout:  ptypes.Duration(111 * time.Second),
 				},
 			},
 			ProxyProtocol: &static.ProxyProtocol{
@@ -78,9 +78,9 @@ func TestDo_globalConfiguration(t *testing.T) {
 			Address: "fii Address",
 			Transport: &static.EntryPointsTransport{
 				RespondingTimeouts: &static.RespondingTimeouts{
-					ReadTimeout:  types.Duration(111 * time.Second),
-					WriteTimeout: types.Duration(111 * time.Second),
-					IdleTimeout:  types.Duration(111 * time.Second),
+					ReadTimeout:  ptypes.Duration(111 * time.Second),
+					WriteTimeout: ptypes.Duration(111 * time.Second),
+					IdleTimeout:  ptypes.Duration(111 * time.Second),
 				},
 			},
 			ProxyProtocol: &static.ProxyProtocol{
@@ -95,16 +95,16 @@ func TestDo_globalConfiguration(t *testing.T) {
 				CAServer:     "CAServer",
 				Storage:      "Storage",
 				KeyType:      "MyKeyType",
-				DNSChallenge: &acmeprovider.DNSChallenge{Provider: "DNSProvider"},
-				HTTPChallenge: &acmeprovider.HTTPChallenge{
+				DNSChallenge: &acme.DNSChallenge{Provider: "DNSProvider"},
+				HTTPChallenge: &acme.HTTPChallenge{
 					EntryPoint: "MyEntryPoint",
 				},
-				TLSChallenge: &acmeprovider.TLSChallenge{},
+				TLSChallenge: &acme.TLSChallenge{},
 			},
 		},
 	}
 	config.Providers = &static.Providers{
-		ProvidersThrottleDuration: types.Duration(111 * time.Second),
+		ProvidersThrottleDuration: ptypes.Duration(111 * time.Second),
 	}
 
 	config.ServersTransport = &static.ServersTransport{
@@ -112,8 +112,8 @@ func TestDo_globalConfiguration(t *testing.T) {
 		RootCAs:             []traefiktls.FileOrContent{"RootCAs 1", "RootCAs 2", "RootCAs 3"},
 		MaxIdleConnsPerHost: 111,
 		ForwardingTimeouts: &static.ForwardingTimeouts{
-			DialTimeout:           types.Duration(111 * time.Second),
-			ResponseHeaderTimeout: types.Duration(111 * time.Second),
+			DialTimeout:           ptypes.Duration(111 * time.Second),
+			ResponseHeaderTimeout: ptypes.Duration(111 * time.Second),
 		},
 	}
 
@@ -157,6 +157,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 		SwarmMode:               true,
 		Network:                 "MyNetwork",
 		SwarmModeRefreshSeconds: 42,
+		HTTPClientTimeout:       42,
 	}
 
 	config.Providers.KubernetesIngress = &ingress.Provider{

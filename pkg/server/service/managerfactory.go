@@ -3,18 +3,18 @@ package service
 import (
 	"net/http"
 
-	"github.com/containous/traefik/v2/pkg/api"
-	"github.com/containous/traefik/v2/pkg/config/runtime"
-	"github.com/containous/traefik/v2/pkg/config/static"
-	"github.com/containous/traefik/v2/pkg/metrics"
-	"github.com/containous/traefik/v2/pkg/safe"
+	"github.com/traefik/traefik/v2/pkg/api"
+	"github.com/traefik/traefik/v2/pkg/config/runtime"
+	"github.com/traefik/traefik/v2/pkg/config/static"
+	"github.com/traefik/traefik/v2/pkg/metrics"
+	"github.com/traefik/traefik/v2/pkg/safe"
 )
 
 // ManagerFactory a factory of service manager.
 type ManagerFactory struct {
 	metricsRegistry metrics.Registry
 
-	defaultRoundTripper http.RoundTripper
+	roundTripperManager *RoundTripperManager
 
 	api              func(configuration *runtime.Configuration) http.Handler
 	restHandler      http.Handler
@@ -26,11 +26,11 @@ type ManagerFactory struct {
 }
 
 // NewManagerFactory creates a new ManagerFactory.
-func NewManagerFactory(staticConfiguration static.Configuration, routinesPool *safe.Pool, metricsRegistry metrics.Registry) *ManagerFactory {
+func NewManagerFactory(staticConfiguration static.Configuration, routinesPool *safe.Pool, metricsRegistry metrics.Registry, roundTripperManager *RoundTripperManager) *ManagerFactory {
 	factory := &ManagerFactory{
 		metricsRegistry:     metricsRegistry,
-		defaultRoundTripper: setupDefaultRoundTripper(staticConfiguration.ServersTransport),
 		routinesPool:        routinesPool,
+		roundTripperManager: roundTripperManager,
 	}
 
 	if staticConfiguration.API != nil {
@@ -61,6 +61,6 @@ func NewManagerFactory(staticConfiguration static.Configuration, routinesPool *s
 
 // Build creates a service manager.
 func (f *ManagerFactory) Build(configuration *runtime.Configuration) *InternalHandlers {
-	svcManager := NewManager(configuration.Services, f.defaultRoundTripper, f.metricsRegistry, f.routinesPool)
+	svcManager := NewManager(configuration.Services, f.metricsRegistry, f.routinesPool, f.roundTripperManager)
 	return NewInternalHandlers(f.api, configuration, f.restHandler, f.metricsHandler, f.pingHandler, f.dashboardHandler, svcManager)
 }

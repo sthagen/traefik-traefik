@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	"github.com/containous/traefik/v2/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	ptypes "github.com/traefik/paerser/types"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
 )
 
 func TestDecodeConfiguration(t *testing.T) {
@@ -36,6 +36,7 @@ func TestDecodeConfiguration(t *testing.T) {
 		"traefik.http.middlewares.Middleware6.errors.status":                                       "foobar, fiibar",
 		"traefik.http.middlewares.Middleware7.forwardauth.address":                                 "foobar",
 		"traefik.http.middlewares.Middleware7.forwardauth.authresponseheaders":                     "foobar, fiibar",
+		"traefik.http.middlewares.Middleware7.forwardauth.authrequestheaders":                      "foobar, fiibar",
 		"traefik.http.middlewares.Middleware7.forwardauth.tls.ca":                                  "foobar",
 		"traefik.http.middlewares.Middleware7.forwardauth.tls.caoptional":                          "true",
 		"traefik.http.middlewares.Middleware7.forwardauth.tls.cert":                                "foobar",
@@ -376,7 +377,7 @@ func TestDecodeConfiguration(t *testing.T) {
 					RateLimit: &dynamic.RateLimit{
 						Average: 42,
 						Burst:   42,
-						Period:  types.Duration(time.Second),
+						Period:  ptypes.Duration(time.Second),
 						SourceCriterion: &dynamic.SourceCriterion{
 							IPStrategy: &dynamic.IPStrategy{
 								Depth:       42,
@@ -493,6 +494,10 @@ func TestDecodeConfiguration(t *testing.T) {
 						},
 						TrustForwardHeader: true,
 						AuthResponseHeaders: []string{
+							"foobar",
+							"fiibar",
+						},
+						AuthRequestHeaders: []string{
 							"foobar",
 							"fiibar",
 						},
@@ -836,7 +841,7 @@ func TestEncodeConfiguration(t *testing.T) {
 					RateLimit: &dynamic.RateLimit{
 						Average: 42,
 						Burst:   42,
-						Period:  types.Duration(time.Second),
+						Period:  ptypes.Duration(time.Second),
 						SourceCriterion: &dynamic.SourceCriterion{
 							IPStrategy: &dynamic.IPStrategy{
 								Depth:       42,
@@ -961,6 +966,10 @@ func TestEncodeConfiguration(t *testing.T) {
 						},
 						TrustForwardHeader: true,
 						AuthResponseHeaders: []string{
+							"foobar",
+							"fiibar",
+						},
+						AuthRequestHeaders: []string{
 							"foobar",
 							"fiibar",
 						},
@@ -1134,6 +1143,7 @@ func TestEncodeConfiguration(t *testing.T) {
 		"traefik.HTTP.Middlewares.Middleware6.Errors.Status":                                       "foobar, fiibar",
 		"traefik.HTTP.Middlewares.Middleware7.ForwardAuth.Address":                                 "foobar",
 		"traefik.HTTP.Middlewares.Middleware7.ForwardAuth.AuthResponseHeaders":                     "foobar, fiibar",
+		"traefik.HTTP.Middlewares.Middleware7.ForwardAuth.AuthRequestHeaders":                      "foobar, fiibar",
 		"traefik.HTTP.Middlewares.Middleware7.ForwardAuth.TLS.CA":                                  "foobar",
 		"traefik.HTTP.Middlewares.Middleware7.ForwardAuth.TLS.CAOptional":                          "true",
 		"traefik.HTTP.Middlewares.Middleware7.ForwardAuth.TLS.Cert":                                "foobar",

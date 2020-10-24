@@ -70,6 +70,7 @@ http:
         passHostHeader: true
         responseForwarding:
           flushInterval: foobar
+        serversTransport: foobar
     Service02:
       mirroring:
         service: foobar
@@ -157,6 +158,9 @@ http:
         authResponseHeaders:
         - foobar
         - foobar
+        authRequestHeaders:
+        - foobar
+        - foobar
     Middleware10:
       headers:
         customRequestHeaders:
@@ -222,7 +226,7 @@ http:
       inFlightReq:
         amount: 42
         sourceCriterion:
-          ipstrategy:
+          ipStrategy:
             depth: 42
             excludedIPs:
             - foobar
@@ -256,14 +260,14 @@ http:
     Middleware14:
       plugin:
         PluginConf:
-          foo = "bar"
+          foo: bar
     Middleware15:
       rateLimit:
         average: 42
         period: 42
         burst: 42
         sourceCriterion:
-          ipstrategy:
+          ipStrategy:
             depth: 42
             excludedIPs:
             - foobar
@@ -301,6 +305,39 @@ http:
         regex:
         - foobar
         - foobar
+  serversTransports:
+    ServersTransport0:
+      serverName: foobar
+      insecureSkipVerify: true
+      rootCAs:
+      - foobar
+      - foobar
+      certificates:
+      - certFile: foobar
+        keyFile: foobar
+      - certFile: foobar
+        keyFile: foobar
+      maxIdleConnsPerHost: 42
+      forwardingTimeouts:
+        dialTimeout: 42s
+        responseHeaderTimeout: 42s
+        idleConnTimeout: 42s
+    ServersTransport1:
+      serverName: foobar
+      insecureSkipVerify: true
+      rootCAs:
+      - foobar
+      - foobar
+      certificates:
+      - certFile: foobar
+        keyFile: foobar
+      - certFile: foobar
+        keyFile: foobar
+      maxIdleConnsPerHost: 42
+      forwardingTimeouts:
+        dialTimeout: 42s
+        responseHeaderTimeout: 42s
+        idleConnTimeout: 42s
 tcp:
   routers:
     TCPRouter0:

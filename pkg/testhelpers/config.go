@@ -1,13 +1,14 @@
 package testhelpers
 
 import (
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
 )
 
 // BuildConfiguration is a helper to create a configuration.
 func BuildConfiguration(dynamicConfigBuilders ...func(*dynamic.HTTPConfiguration)) *dynamic.HTTPConfiguration {
 	conf := &dynamic.HTTPConfiguration{
-		Models: map[string]*dynamic.Model{},
+		Models:            map[string]*dynamic.Model{},
+		ServersTransports: map[string]*dynamic.ServersTransport{},
 	}
 
 	for _, build := range dynamicConfigBuilders {

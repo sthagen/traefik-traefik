@@ -108,16 +108,16 @@ The Kubernetes Ingress Controller, The Custom Resource Way.
       name: myingressroute
       namespace: default
     
-      spec:
-        entryPoints:
-          - web
+    spec:
+      entryPoints:
+        - web
     
-        routes:
-          - match: Host(`foo`) && PathPrefix(`/bar`)
-            kind: Rule
-            services:
-            - name: whoami
-              port: 80
+      routes:
+      - match: Host(`foo`) && PathPrefix(`/bar`)
+        kind: Rule
+        services:
+        - name: whoami
+          port: 80
     
     ---
     apiVersion: traefik.containo.us/v1alpha1
@@ -126,15 +126,15 @@ The Kubernetes Ingress Controller, The Custom Resource Way.
       name: ingressroute.tcp
       namespace: default
     
-      spec:
-        entryPoints:
-          - tcpep
-        routes:
-          - match: HostSNI(`bar`)
-            kind: Rule
-            services:
-              - name: whoamitcp
-                port: 8080
+    spec:
+      entryPoints:
+        - tcpep
+      routes:
+      - match: HostSNI(`bar`)
+        kind: Rule
+        services:
+          - name: whoamitcp
+            port: 8080
     
     ---
     apiVersion: traefik.containo.us/v1alpha1
@@ -143,14 +143,14 @@ The Kubernetes Ingress Controller, The Custom Resource Way.
       name: ingressroute.udp
       namespace: default
     
-      spec:
-        entryPoints:
-          - fooudp
-        routes:
-          - kind: Rule
-            services:
-              - name: whoamiudp
-                port: 8080
+    spec:
+      entryPoints:
+        - fooudp
+      routes:
+      - kind: Rule
+        services:
+          - name: whoamiudp
+            port: 8080
     ```
     
     ```yaml tab="Whoami"
@@ -160,24 +160,24 @@ The Kubernetes Ingress Controller, The Custom Resource Way.
       name: whoami
       namespace: default
       labels:
-        app: containous
+        app: traefiklabs
         name: whoami
     
     spec:
       replicas: 2
       selector:
         matchLabels:
-          app: containous
+          app: traefiklabs
           task: whoami
       template:
         metadata:
           labels:
-            app: containous
+            app: traefiklabs
             task: whoami
         spec:
           containers:
-            - name: containouswhoami
-              image: containous/whoami
+            - name: whoami
+              image: traefik/whoami
               ports:
                 - containerPort: 80
     
@@ -193,7 +193,7 @@ The Kubernetes Ingress Controller, The Custom Resource Way.
         - name: http
           port: 80
       selector:
-        app: containous
+        app: traefiklabs
         task: whoami
     
     ---
@@ -203,24 +203,24 @@ The Kubernetes Ingress Controller, The Custom Resource Way.
       name: whoamitcp
       namespace: default
       labels:
-        app: containous
+        app: traefiklabs
         name: whoamitcp
     
     spec:
       replicas: 2
       selector:
         matchLabels:
-          app: containous
+          app: traefiklabs
           task: whoamitcp
       template:
         metadata:
           labels:
-            app: containous
+            app: traefiklabs
             task: whoamitcp
         spec:
           containers:
-            - name: containouswhoamitcp
-              image: containous/whoamitcp
+            - name: whoamitcp
+              image: traefik/whoamitcp
               ports:
                 - containerPort: 8080
     
@@ -236,7 +236,7 @@ The Kubernetes Ingress Controller, The Custom Resource Way.
         - protocol: TCP
           port: 8080
       selector:
-        app: containous
+        app: traefiklabs
         task: whoamitcp
     
     ---
@@ -246,24 +246,24 @@ The Kubernetes Ingress Controller, The Custom Resource Way.
       name: whoamiudp
       namespace: default
       labels:
-        app: containous
+        app: traefiklabs
         name: whoamiudp
     
     spec:
       replicas: 2
       selector:
         matchLabels:
-          app: containous
+          app: traefiklabs
           task: whoamiudp
       template:
         metadata:
           labels:
-            app: containous
+            app: traefiklabs
             task: whoamiudp
         spec:
           containers:
-            - name: containouswhoamiudp
-              image: containous/whoamiudp:dev
+            - name: whoamiudp
+              image: traefik/whoamiudp:latest
               ports:
                 - containerPort: 8080
     
@@ -278,7 +278,7 @@ The Kubernetes Ingress Controller, The Custom Resource Way.
       ports:
         - port: 8080
       selector:
-        app: containous
+        app: traefiklabs
         task: whoamiudp
     ```
 
@@ -687,7 +687,7 @@ More information in the dedicated server [load balancing](../services/index.md#l
         - name: http
           port: 80
       selector:
-        app: containous
+        app: traefiklabs
         task: app1
     ---
     apiVersion: v1
@@ -701,7 +701,7 @@ More information in the dedicated server [load balancing](../services/index.md#l
         - name: http
           port: 80
       selector:
-        app: containous
+        app: traefiklabs
         task: app2
     ```
 
@@ -780,7 +780,7 @@ More information in the dedicated [Weighted Round Robin](../services/index.md#we
         - name: http
           port: 80
       selector:
-        app: containous
+        app: traefiklabs
         task: app1
     ---
     apiVersion: v1
@@ -794,7 +794,7 @@ More information in the dedicated [Weighted Round Robin](../services/index.md#we
         - name: http
           port: 80
       selector:
-        app: containous
+        app: traefiklabs
         task: app2
     ---
     apiVersion: v1
@@ -808,7 +808,7 @@ More information in the dedicated [Weighted Round Robin](../services/index.md#we
         - name: http
           port: 80
       selector:
-        app: containous
+        app: traefiklabs
         task: app3
     ```
 
@@ -891,7 +891,7 @@ More information in the dedicated [mirroring](../services/index.md#mirroring-ser
         - name: http
           port: 80
       selector:
-        app: containous
+        app: traefiklabs
         task: app1
     ---
     apiVersion: v1
@@ -905,7 +905,7 @@ More information in the dedicated [mirroring](../services/index.md#mirroring-ser
         - name: http
           port: 80
       selector:
-        app: containous
+        app: traefiklabs
         task: app2
     ```
 
@@ -1026,7 +1026,7 @@ and there is a second level because each whoami service is a `replicaset` and is
         spec:
           containers:
             - name: whoami1
-              image: containous/whoami
+              image: traefik/whoami
               ports:
                 - name: web
                   containerPort: 80
@@ -1052,7 +1052,7 @@ and there is a second level because each whoami service is a `replicaset` and is
         spec:
           containers:
             - name: whoami2
-              image: containous/whoami
+              image: traefik/whoami
               ports:
                 - name: web
                   containerPort: 80
@@ -1488,9 +1488,9 @@ or referencing TLS stores in the [`IngressRoute`](#kind-ingressroute) / [`Ingres
         secretName: mySecret                      # [1]
     ```
 
-| Ref | Attribute                   | Purpose                                                                                                                                                                    |
-|-----|-----------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [1] | `secretName`                | The name of the referenced Kubernetes [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) that holds the default certificate for the store.                                                                             |
+| Ref | Attribute    | Purpose                                                                                                                                                     |
+|-----|--------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [1] | `secretName` | The name of the referenced Kubernetes [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) that holds the default certificate for the store. |
 
 ??? example "Declaring and referencing a TLSStore"
    
@@ -1535,6 +1535,84 @@ or referencing TLS stores in the [`IngressRoute`](#kind-ingressroute) / [`Ingres
     data:
       tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=
       tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0=
+    ```
+
+### Kind: `ServersTransport`
+
+`ServersTransport` is the CRD implementation of a [ServersTransport](../services/index.md#serverstransport).
+
+!!! important "Default serversTransport"
+    If no `serversTransport` is specified, the `default@internal` will be used. 
+    The `default@internal` serversTransport is created from the [static configuration](../overview.md#transport-configuration). 
+
+!!! info "ServersTransport Attributes"
+   
+    ```yaml tab="TLSStore"
+    apiVersion: traefik.containo.us/v1alpha1
+    kind: ServersTransport
+    metadata:
+      name: mytransport
+      namespace: default
+    
+    spec:
+      serverName: foobar               # [1]
+      insecureSkipVerify: true         # [2]
+      rootCAsSecrets:                  # [3]
+        - foobar
+        - foobar
+      certificatesSecrets:             # [4]
+        - foobar
+        - foobar
+      maxIdleConnsPerHost: 1           # [5]
+      forwardingTimeouts:              # [6]
+        dialTimeout: 42s               # [7]
+        responseHeaderTimeout: 42s     # [8]
+        idleConnTimeout: 42s           # [9]
+    ```
+
+| Ref | Attribute               | Purpose                                                                                                                                              |
+|-----|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [1] | `serverName`            | ServerName used to contact the server.                                                                                                               |
+| [2] | `insecureSkipVerify`    | Disable SSL certificate verification.                                                                                                                |
+| [3] | `rootCAsSecrets`        | Add cert file for self-signed certificate.                                                                                                           |
+| [4] | `certificatesSecrets`   | Certificates for mTLS.                                                                                                                               |
+| [5] | `maxIdleConnsPerHost`   | If non-zero, controls the maximum idle (keep-alive) to keep per-host. If zero, `defaultMaxIdleConnsPerHost` is used.                                 |
+| [6] | `forwardingTimeouts`    | Timeouts for requests forwarded to the backend servers.                                                                                              |
+| [7] | `dialTimeout`           | The amount of time to wait until a connection to a backend server can be established. If zero, no timeout exists.                                    |
+| [8] | `responseHeaderTimeout` | The amount of time to wait for a server's response headers after fully writing the request (including its body, if any). If zero, no timeout exists. |
+| [9] | `idleConnTimeout`       | The maximum period for which an idle HTTP keep-alive connection will remain open before closing itself.                                              |
+
+??? example "Declaring and referencing a ServersTransport"
+   
+    ```yaml tab="ServersTransport"
+    apiVersion: traefik.containo.us/v1alpha1
+    kind: ServersTransport
+    metadata:
+      name: mytransport
+      namespace: default
+    
+    spec:
+      serverName: example.org
+      insecureSkipVerify: true
+    ```
+    
+    ```yaml tab="IngressRoute"
+    apiVersion: traefik.containo.us/v1alpha1
+    kind: IngressRoute
+    metadata:
+      name: testroute
+      namespace: default
+    
+    spec:
+      entryPoints:
+        - web
+      routes:
+      - match: Host(`example.com`)
+        kind: Rule
+        services:
+        - name: whoami
+          port: 80
+          serversTransport: mytransport
     ```
 
 ## Further

@@ -6,10 +6,10 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/containous/traefik/v2/pkg/log"
-	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/generated/clientset/versioned"
-	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/generated/informers/externalversions"
-	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
+	"github.com/traefik/traefik/v2/pkg/log"
+	"github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/generated/clientset/versioned"
+	"github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/generated/informers/externalversions"
+	"github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	kubeerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,6 +52,7 @@ type Client interface {
 	GetTraefikService(namespace, name string) (*v1alpha1.TraefikService, bool, error)
 	GetTraefikServices() []*v1alpha1.TraefikService
 	GetTLSOptions() []*v1alpha1.TLSOption
+	GetServersTransports() []*v1alpha1.ServersTransport
 	GetTLSStores() []*v1alpha1.TLSStore
 
 	GetService(namespace, name string) (*corev1.Service, bool, error)
@@ -162,6 +163,7 @@ func (c *clientWrapper) WatchAll(namespaces []string, stopCh <-chan struct{}) (<
 		factoryCrd.Traefik().V1alpha1().IngressRouteTCPs().Informer().AddEventHandler(eventHandler)
 		factoryCrd.Traefik().V1alpha1().IngressRouteUDPs().Informer().AddEventHandler(eventHandler)
 		factoryCrd.Traefik().V1alpha1().TLSOptions().Informer().AddEventHandler(eventHandler)
+		factoryCrd.Traefik().V1alpha1().ServersTransports().Informer().AddEventHandler(eventHandler)
 		factoryCrd.Traefik().V1alpha1().TLSStores().Informer().AddEventHandler(eventHandler)
 		factoryCrd.Traefik().V1alpha1().TraefikServices().Informer().AddEventHandler(eventHandler)
 
@@ -274,6 +276,21 @@ func (c *clientWrapper) GetTraefikServices() []*v1alpha1.TraefikService {
 			log.Errorf("Failed to list Traefik services in namespace %s: %v", ns, err)
 		}
 		result = append(result, ings...)
+	}
+
+	return result
+}
+
+// GetServersTransport returns all ServersTransport.
+func (c *clientWrapper) GetServersTransports() []*v1alpha1.ServersTransport {
+	var result []*v1alpha1.ServersTransport
+
+	for ns, factory := range c.factoriesCrd {
+		serversTransports, err := factory.Traefik().V1alpha1().ServersTransports().Lister().List(c.labelSelector)
+		if err != nil {
+			log.Errorf("Failed to list servers transport in namespace %s: %v", ns, err)
+		}
+		result = append(result, serversTransports...)
 	}
 
 	return result

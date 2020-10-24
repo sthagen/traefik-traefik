@@ -8,19 +8,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	"github.com/containous/traefik/v2/pkg/safe"
-	"github.com/containous/traefik/v2/pkg/tls"
-	"github.com/containous/traefik/v2/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	ptypes "github.com/traefik/paerser/types"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
+	"github.com/traefik/traefik/v2/pkg/safe"
+	"github.com/traefik/traefik/v2/pkg/tls"
 )
 
 func TestProvider_Init(t *testing.T) {
 	tests := []struct {
 		desc         string
 		endpoint     string
-		pollInterval types.Duration
+		pollInterval ptypes.Duration
 		expErr       bool
 	}{
 		{
@@ -35,7 +35,7 @@ func TestProvider_Init(t *testing.T) {
 		{
 			desc:         "should not return an error",
 			endpoint:     "http://localhost:8080",
-			pollInterval: types.Duration(time.Second),
+			pollInterval: ptypes.Duration(time.Second),
 			expErr:       false,
 		},
 	}
@@ -63,8 +63,8 @@ func TestProvider_SetDefaults(t *testing.T) {
 
 	provider.SetDefaults()
 
-	assert.Equal(t, provider.PollInterval, types.Duration(5*time.Second))
-	assert.Equal(t, provider.PollTimeout, types.Duration(5*time.Second))
+	assert.Equal(t, provider.PollInterval, ptypes.Duration(5*time.Second))
+	assert.Equal(t, provider.PollTimeout, ptypes.Duration(5*time.Second))
 }
 
 func TestProvider_fetchConfigurationData(t *testing.T) {
@@ -98,8 +98,8 @@ func TestProvider_fetchConfigurationData(t *testing.T) {
 
 			provider := Provider{
 				Endpoint:     server.URL,
-				PollInterval: types.Duration(1 * time.Second),
-				PollTimeout:  types.Duration(1 * time.Second),
+				PollInterval: ptypes.Duration(1 * time.Second),
+				PollTimeout:  ptypes.Duration(1 * time.Second),
 			}
 
 			err := provider.Init()
@@ -134,9 +134,10 @@ func TestProvider_decodeConfiguration(t *testing.T) {
 			configData: []byte("{\"tcp\":{\"routers\":{\"foo\":{}}}}"),
 			expConfig: &dynamic.Configuration{
 				HTTP: &dynamic.HTTPConfiguration{
-					Routers:     make(map[string]*dynamic.Router),
-					Middlewares: make(map[string]*dynamic.Middleware),
-					Services:    make(map[string]*dynamic.Service),
+					Routers:           make(map[string]*dynamic.Router),
+					Middlewares:       make(map[string]*dynamic.Middleware),
+					Services:          make(map[string]*dynamic.Service),
+					ServersTransports: make(map[string]*dynamic.ServersTransport),
 				},
 				TCP: &dynamic.TCPConfiguration{
 					Routers: map[string]*dynamic.TCPRouter{
@@ -181,8 +182,8 @@ func TestProvider_Provide(t *testing.T) {
 
 	provider := Provider{
 		Endpoint:     server.URL,
-		PollTimeout:  types.Duration(1 * time.Second),
-		PollInterval: types.Duration(100 * time.Millisecond),
+		PollTimeout:  ptypes.Duration(1 * time.Second),
+		PollInterval: ptypes.Duration(100 * time.Millisecond),
 	}
 
 	err := provider.Init()
@@ -192,9 +193,10 @@ func TestProvider_Provide(t *testing.T) {
 
 	expConfiguration := &dynamic.Configuration{
 		HTTP: &dynamic.HTTPConfiguration{
-			Routers:     make(map[string]*dynamic.Router),
-			Middlewares: make(map[string]*dynamic.Middleware),
-			Services:    make(map[string]*dynamic.Service),
+			Routers:           make(map[string]*dynamic.Router),
+			Middlewares:       make(map[string]*dynamic.Middleware),
+			Services:          make(map[string]*dynamic.Service),
+			ServersTransports: make(map[string]*dynamic.ServersTransport),
 		},
 		TCP: &dynamic.TCPConfiguration{
 			Routers:  make(map[string]*dynamic.TCPRouter),
@@ -235,8 +237,8 @@ func TestProvider_ProvideConfigurationOnlyOnceIfUnchanged(t *testing.T) {
 
 	provider := Provider{
 		Endpoint:     server.URL + "/endpoint",
-		PollTimeout:  types.Duration(1 * time.Second),
-		PollInterval: types.Duration(100 * time.Millisecond),
+		PollTimeout:  ptypes.Duration(1 * time.Second),
+		PollInterval: ptypes.Duration(100 * time.Millisecond),
 	}
 
 	err := provider.Init()

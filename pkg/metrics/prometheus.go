@@ -8,27 +8,27 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	"github.com/containous/traefik/v2/pkg/log"
-	"github.com/containous/traefik/v2/pkg/safe"
-	"github.com/containous/traefik/v2/pkg/types"
 	"github.com/go-kit/kit/metrics"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
+	"github.com/traefik/traefik/v2/pkg/log"
+	"github.com/traefik/traefik/v2/pkg/safe"
+	"github.com/traefik/traefik/v2/pkg/types"
 )
 
 const (
-	// MetricNamePrefix prefix of all metric names
+	// MetricNamePrefix prefix of all metric names.
 	MetricNamePrefix = "traefik_"
 
-	// server meta information
+	// server meta information.
 	metricConfigPrefix             = MetricNamePrefix + "config_"
 	configReloadsTotalName         = metricConfigPrefix + "reloads_total"
 	configReloadsFailuresTotalName = metricConfigPrefix + "reloads_failure_total"
 	configLastReloadSuccessName    = metricConfigPrefix + "last_reload_success"
 	configLastReloadFailureName    = metricConfigPrefix + "last_reload_failure"
 
-	// entry point
+	// entry point.
 	metricEntryPointPrefix     = MetricNamePrefix + "entrypoint_"
 	entryPointReqsTotalName    = metricEntryPointPrefix + "requests_total"
 	entryPointReqsTLSTotalName = metricEntryPointPrefix + "requests_tls_total"
@@ -37,7 +37,7 @@ const (
 
 	// service level.
 
-	// MetricServicePrefix prefix of all service metric names
+	// MetricServicePrefix prefix of all service metric names.
 	MetricServicePrefix     = MetricNamePrefix + "service_"
 	serviceReqsTotalName    = MetricServicePrefix + "requests_total"
 	serviceReqsTLSTotalName = MetricServicePrefix + "requests_tls_total"

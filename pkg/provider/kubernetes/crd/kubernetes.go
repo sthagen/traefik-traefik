@@ -13,15 +13,15 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	"github.com/containous/traefik/v2/pkg/job"
-	"github.com/containous/traefik/v2/pkg/log"
-	"github.com/containous/traefik/v2/pkg/provider"
-	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
-	"github.com/containous/traefik/v2/pkg/safe"
-	"github.com/containous/traefik/v2/pkg/tls"
-	"github.com/containous/traefik/v2/pkg/types"
 	"github.com/mitchellh/hashstructure"
+	ptypes "github.com/traefik/paerser/types"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
+	"github.com/traefik/traefik/v2/pkg/job"
+	"github.com/traefik/traefik/v2/pkg/log"
+	"github.com/traefik/traefik/v2/pkg/provider"
+	"github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
+	"github.com/traefik/traefik/v2/pkg/safe"
+	"github.com/traefik/traefik/v2/pkg/tls"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -38,14 +38,14 @@ const (
 
 // Provider holds configurations of the provider.
 type Provider struct {
-	Endpoint               string         `description:"Kubernetes server endpoint (required for external cluster client)." json:"endpoint,omitempty" toml:"endpoint,omitempty" yaml:"endpoint,omitempty"`
-	Token                  string         `description:"Kubernetes bearer token (not needed for in-cluster client)." json:"token,omitempty" toml:"token,omitempty" yaml:"token,omitempty"`
-	CertAuthFilePath       string         `description:"Kubernetes certificate authority file path (not needed for in-cluster client)." json:"certAuthFilePath,omitempty" toml:"certAuthFilePath,omitempty" yaml:"certAuthFilePath,omitempty"`
-	DisablePassHostHeaders bool           `description:"Kubernetes disable PassHost Headers." json:"disablePassHostHeaders,omitempty" toml:"disablePassHostHeaders,omitempty" yaml:"disablePassHostHeaders,omitempty" export:"true"`
-	Namespaces             []string       `description:"Kubernetes namespaces." json:"namespaces,omitempty" toml:"namespaces,omitempty" yaml:"namespaces,omitempty" export:"true"`
-	LabelSelector          string         `description:"Kubernetes label selector to use." json:"labelSelector,omitempty" toml:"labelSelector,omitempty" yaml:"labelSelector,omitempty" export:"true"`
-	IngressClass           string         `description:"Value of kubernetes.io/ingress.class annotation to watch for." json:"ingressClass,omitempty" toml:"ingressClass,omitempty" yaml:"ingressClass,omitempty" export:"true"`
-	ThrottleDuration       types.Duration `description:"Ingress refresh throttle duration" json:"throttleDuration,omitempty" toml:"throttleDuration,omitempty" yaml:"throttleDuration,omitempty"`
+	Endpoint               string          `description:"Kubernetes server endpoint (required for external cluster client)." json:"endpoint,omitempty" toml:"endpoint,omitempty" yaml:"endpoint,omitempty"`
+	Token                  string          `description:"Kubernetes bearer token (not needed for in-cluster client)." json:"token,omitempty" toml:"token,omitempty" yaml:"token,omitempty"`
+	CertAuthFilePath       string          `description:"Kubernetes certificate authority file path (not needed for in-cluster client)." json:"certAuthFilePath,omitempty" toml:"certAuthFilePath,omitempty" yaml:"certAuthFilePath,omitempty"`
+	DisablePassHostHeaders bool            `description:"Kubernetes disable PassHost Headers." json:"disablePassHostHeaders,omitempty" toml:"disablePassHostHeaders,omitempty" yaml:"disablePassHostHeaders,omitempty" export:"true"`
+	Namespaces             []string        `description:"Kubernetes namespaces." json:"namespaces,omitempty" toml:"namespaces,omitempty" yaml:"namespaces,omitempty" export:"true"`
+	LabelSelector          string          `description:"Kubernetes label selector to use." json:"labelSelector,omitempty" toml:"labelSelector,omitempty" yaml:"labelSelector,omitempty" export:"true"`
+	IngressClass           string          `description:"Value of kubernetes.io/ingress.class annotation to watch for." json:"ingressClass,omitempty" toml:"ingressClass,omitempty" yaml:"ingressClass,omitempty" export:"true"`
+	ThrottleDuration       ptypes.Duration `description:"Ingress refresh throttle duration" json:"throttleDuration,omitempty" toml:"throttleDuration,omitempty" yaml:"throttleDuration,omitempty"`
 	lastConfiguration      safe.Safe
 }
 
@@ -237,12 +237,77 @@ func (p *Provider) loadConfigurationFromCRD(ctx context.Context, client Client) 
 	}
 
 	cb := configBuilder{client}
+
 	for _, service := range client.GetTraefikServices() {
 		err := cb.buildTraefikService(ctx, service, conf.HTTP.Services)
 		if err != nil {
 			log.FromContext(ctx).WithField(log.ServiceName, service.Name).
 				Errorf("Error while building TraefikService: %v", err)
 			continue
+		}
+	}
+
+	for _, serversTransport := range client.GetServersTransports() {
+		logger := log.FromContext(ctx).WithField(log.ServersTransportName, serversTransport.Name)
+
+		var rootCAs []tls.FileOrContent
+		for _, secret := range serversTransport.Spec.RootCAsSecrets {
+			caSecret, err := loadCASecret(serversTransport.Namespace, secret, client)
+			if err != nil {
+				logger.Errorf("Error while loading rootCAs %s: %v", secret, err)
+				continue
+			}
+
+			rootCAs = append(rootCAs, tls.FileOrContent(caSecret))
+		}
+
+		var certs tls.Certificates
+		for _, secret := range serversTransport.Spec.CertificatesSecrets {
+			tlsSecret, tlsKey, err := loadAuthTLSSecret(serversTransport.Namespace, secret, client)
+			if err != nil {
+				logger.Errorf("Error while loading certificates %s: %v", secret, err)
+				continue
+			}
+
+			certs = append(certs, tls.Certificate{
+				CertFile: tls.FileOrContent(tlsSecret),
+				KeyFile:  tls.FileOrContent(tlsKey),
+			})
+		}
+
+		forwardingTimeout := &dynamic.ForwardingTimeouts{}
+		forwardingTimeout.SetDefaults()
+
+		if serversTransport.Spec.ForwardingTimeouts != nil {
+			if serversTransport.Spec.ForwardingTimeouts.DialTimeout != nil {
+				err := forwardingTimeout.DialTimeout.Set(serversTransport.Spec.ForwardingTimeouts.DialTimeout.String())
+				if err != nil {
+					logger.Errorf("Error while reading DialTimeout: %v", err)
+				}
+			}
+
+			if serversTransport.Spec.ForwardingTimeouts.ResponseHeaderTimeout != nil {
+				err := forwardingTimeout.ResponseHeaderTimeout.Set(serversTransport.Spec.ForwardingTimeouts.ResponseHeaderTimeout.String())
+				if err != nil {
+					logger.Errorf("Error while reading ResponseHeaderTimeout: %v", err)
+				}
+			}
+
+			if serversTransport.Spec.ForwardingTimeouts.IdleConnTimeout != nil {
+				err := forwardingTimeout.IdleConnTimeout.Set(serversTransport.Spec.ForwardingTimeouts.IdleConnTimeout.String())
+				if err != nil {
+					logger.Errorf("Error while reading IdleConnTimeout: %v", err)
+				}
+			}
+		}
+
+		conf.HTTP.ServersTransports[serversTransport.Name] = &dynamic.ServersTransport{
+			ServerName:          serversTransport.Spec.ServerName,
+			InsecureSkipVerify:  serversTransport.Spec.InsecureSkipVerify,
+			RootCAs:             rootCAs,
+			Certificates:        certs,
+			MaxIdleConnsPerHost: serversTransport.Spec.MaxIdleConnsPerHost,
+			ForwardingTimeouts:  forwardingTimeout,
 		}
 	}
 
@@ -311,6 +376,7 @@ func createForwardAuthMiddleware(k8sClient Client, namespace string, auth *v1alp
 		Address:             auth.Address,
 		TrustForwardHeader:  auth.TrustForwardHeader,
 		AuthResponseHeaders: auth.AuthResponseHeaders,
+		AuthRequestHeaders:  auth.AuthRequestHeaders,
 	}
 
 	if auth.TLS == nil {

@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016-2020 Containous SAS
+Copyright (c) 2016-2020 Containous SAS; 2020-2020 Traefik Labs
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,15 +27,17 @@ THE SOFTWARE.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
+	v1alpha1 "github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 )
 
 // IngressRouteLister helps list IngressRoutes.
+// All objects returned here must be treated as read-only.
 type IngressRouteLister interface {
 	// List lists all IngressRoutes in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.IngressRoute, err error)
 	// IngressRoutes returns an object that can list and get IngressRoutes.
 	IngressRoutes(namespace string) IngressRouteNamespaceLister
@@ -66,10 +68,13 @@ func (s *ingressRouteLister) IngressRoutes(namespace string) IngressRouteNamespa
 }
 
 // IngressRouteNamespaceLister helps list and get IngressRoutes.
+// All objects returned here must be treated as read-only.
 type IngressRouteNamespaceLister interface {
 	// List lists all IngressRoutes in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.IngressRoute, err error)
 	// Get retrieves the IngressRoute from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.IngressRoute, error)
 	IngressRouteNamespaceListerExpansion
 }

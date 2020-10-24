@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/containous/traefik/v2/pkg/config/dynamic"
-	"github.com/containous/traefik/v2/pkg/log"
-	"github.com/containous/traefik/v2/pkg/provider"
-	"github.com/containous/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
-	"github.com/containous/traefik/v2/pkg/tls"
+	"github.com/traefik/traefik/v2/pkg/config/dynamic"
+	"github.com/traefik/traefik/v2/pkg/log"
+	"github.com/traefik/traefik/v2/pkg/provider"
+	"github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
+	"github.com/traefik/traefik/v2/pkg/tls"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -22,9 +22,10 @@ const (
 
 func (p *Provider) loadIngressRouteConfiguration(ctx context.Context, client Client, tlsConfigs map[string]*tls.CertAndStores) *dynamic.HTTPConfiguration {
 	conf := &dynamic.HTTPConfiguration{
-		Routers:     map[string]*dynamic.Router{},
-		Middlewares: map[string]*dynamic.Middleware{},
-		Services:    map[string]*dynamic.Service{},
+		Routers:           map[string]*dynamic.Router{},
+		Middlewares:       map[string]*dynamic.Middleware{},
+		Services:          map[string]*dynamic.Service{},
+		ServersTransports: map[string]*dynamic.ServersTransport{},
 	}
 
 	for _, ingressRoute := range client.GetIngressRoutes() {
@@ -264,6 +265,7 @@ func (c configBuilder) buildServersLB(namespace string, svc v1alpha1.LoadBalance
 	lb.ResponseForwarding = conf.ResponseForwarding
 
 	lb.Sticky = svc.Sticky
+	lb.ServersTransport = svc.ServersTransport
 
 	return &dynamic.Service{LoadBalancer: lb}, nil
 }
