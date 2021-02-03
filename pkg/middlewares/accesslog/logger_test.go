@@ -355,9 +355,11 @@ func TestLoggerJSON(t *testing.T) {
 				Duration:                  assertFloat64NotZero(),
 				Overhead:                  assertFloat64NotZero(),
 				RetryAttempts:             assertFloat64(float64(testRetryAttempts)),
+				TLSVersion:                assertString("1.3"),
+				TLSCipher:                 assertString("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"),
 				"time":                    assertNotEmpty(),
-				"StartLocal":              assertNotEmpty(),
-				"StartUTC":                assertNotEmpty(),
+				StartLocal:                assertNotEmpty(),
+				StartUTC:                  assertNotEmpty(),
 			},
 		},
 		{
@@ -683,6 +685,8 @@ func TestNewLogHandlerOutputStdout(t *testing.T) {
 }
 
 func assertValidLogData(t *testing.T, expected string, logData []byte) {
+	t.Helper()
+
 	if len(expected) == 0 {
 		assert.Zero(t, len(logData))
 		t.Log(string(logData))
@@ -716,6 +720,8 @@ func assertValidLogData(t *testing.T, expected string, logData []byte) {
 }
 
 func captureStdout(t *testing.T) (out *os.File, restoreStdout func()) {
+	t.Helper()
+
 	file, err := ioutil.TempFile("", "testlogger")
 	require.NoError(t, err, "failed to create temp file")
 
@@ -731,6 +737,8 @@ func captureStdout(t *testing.T) (out *os.File, restoreStdout func()) {
 }
 
 func createTempDir(t *testing.T, prefix string) string {
+	t.Helper()
+
 	tmpDir, err := ioutil.TempDir("", prefix)
 	require.NoError(t, err, "failed to create temp dir")
 
@@ -740,6 +748,8 @@ func createTempDir(t *testing.T, prefix string) string {
 }
 
 func doLoggingTLSOpt(t *testing.T, config *types.AccessLog, enableTLS bool) {
+	t.Helper()
+
 	logger, err := NewHandler(config)
 	require.NoError(t, err)
 	defer logger.Close()
@@ -764,17 +774,24 @@ func doLoggingTLSOpt(t *testing.T, config *types.AccessLog, enableTLS bool) {
 		},
 	}
 	if enableTLS {
-		req.TLS = &tls.ConnectionState{}
+		req.TLS = &tls.ConnectionState{
+			Version:     tls.VersionTLS13,
+			CipherSuite: tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+		}
 	}
 
 	logger.ServeHTTP(httptest.NewRecorder(), req, http.HandlerFunc(logWriterTestHandlerFunc))
 }
 
 func doLoggingTLS(t *testing.T, config *types.AccessLog) {
+	t.Helper()
+
 	doLoggingTLSOpt(t, config, true)
 }
 
 func doLogging(t *testing.T, config *types.AccessLog) {
+	t.Helper()
+
 	doLoggingTLSOpt(t, config, false)
 }
 

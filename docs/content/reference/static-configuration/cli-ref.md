@@ -102,6 +102,9 @@ Entry points definition. (Default: ```false```)
 `--entrypoints.<name>.address`:  
 Entry point address.
 
+`--entrypoints.<name>.enablehttp3`:  
+Enable HTTP3. (Default: ```false```)
+
 `--entrypoints.<name>.forwardedheaders.insecure`:  
 Trust all forwarded headers. (Default: ```false```)
 
@@ -168,11 +171,17 @@ ReadTimeout is the maximum duration for reading the entire request, including th
 `--entrypoints.<name>.transport.respondingtimeouts.writetimeout`:  
 WriteTimeout is the maximum duration before timing out writes of the response. If zero, no timeout is set. (Default: ```0```)
 
+`--entrypoints.<name>.udp.timeout`:  
+Timeout defines how long to wait on an idle session before releasing the related resources. (Default: ```3```)
+
 `--experimental.devplugin.gopath`:  
 plugin's GOPATH.
 
 `--experimental.devplugin.modulename`:  
 plugin's module name.
+
+`--experimental.http3`:  
+Enable HTTP3. (Default: ```false```)
 
 `--experimental.kubernetesgateway`:  
 Allow the Kubernetes gateway api provider usage. (Default: ```false```)
