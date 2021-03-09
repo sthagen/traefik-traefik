@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -112,7 +111,7 @@ func newExternalClusterClient(endpoint, token, caFilePath string) (*clientWrappe
 	}
 
 	if caFilePath != "" {
-		caData, err := ioutil.ReadFile(caFilePath)
+		caData, err := os.ReadFile(caFilePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read CA file %s: %w", caFilePath, err)
 		}
@@ -341,7 +340,7 @@ func (c *clientWrapper) updateIngressStatusOld(src *networkingv1beta1.Ingress, i
 }
 
 // isLoadBalancerIngressEquals returns true if the given slices are equal, false otherwise.
-func isLoadBalancerIngressEquals(aSlice []corev1.LoadBalancerIngress, bSlice []corev1.LoadBalancerIngress) bool {
+func isLoadBalancerIngressEquals(aSlice, bSlice []corev1.LoadBalancerIngress) bool {
 	if len(aSlice) != len(bSlice) {
 		return false
 	}
@@ -475,4 +474,17 @@ func supportsIngressClass(serverVersion *version.Version) bool {
 	ingressClassVersion := version.Must(version.NewVersion("1.18"))
 
 	return ingressClassVersion.LessThanOrEqual(serverVersion)
+}
+
+// filterIngressClassByName return a slice containing ingressclasses with the correct name.
+func filterIngressClassByName(ingressClassName string, ics []*networkingv1beta1.IngressClass) []*networkingv1beta1.IngressClass {
+	var ingressClasses []*networkingv1beta1.IngressClass
+
+	for _, ic := range ics {
+		if ic.Name == ingressClassName {
+			ingressClasses = append(ingressClasses, ic)
+		}
+	}
+
+	return ingressClasses
 }
