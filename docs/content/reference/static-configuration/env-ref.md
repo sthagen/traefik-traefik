@@ -174,17 +174,17 @@ WriteTimeout is the maximum duration before timing out writes of the response. I
 `TRAEFIK_ENTRYPOINTS_<NAME>_UDP_TIMEOUT`:  
 Timeout defines how long to wait on an idle session before releasing the related resources. (Default: ```3```)
 
-`TRAEFIK_EXPERIMENTAL_DEVPLUGIN_GOPATH`:  
-plugin's GOPATH.
-
-`TRAEFIK_EXPERIMENTAL_DEVPLUGIN_MODULENAME`:  
-plugin's module name.
-
 `TRAEFIK_EXPERIMENTAL_HTTP3`:  
 Enable HTTP3. (Default: ```false```)
 
 `TRAEFIK_EXPERIMENTAL_KUBERNETESGATEWAY`:  
 Allow the Kubernetes gateway api provider usage. (Default: ```false```)
+
+`TRAEFIK_EXPERIMENTAL_LOCALPLUGINS_<NAME>`:  
+Local plugins configuration. (Default: ```false```)
+
+`TRAEFIK_EXPERIMENTAL_LOCALPLUGINS_<NAME>_MODULENAME`:  
+plugin's module name.
 
 `TRAEFIK_EXPERIMENTAL_PLUGINS_<NAME>_MODULENAME`:  
 plugin's module name.
@@ -231,6 +231,9 @@ Enable metrics on entry points. (Default: ```true```)
 `TRAEFIK_METRICS_DATADOG_ADDRESS`:  
 Datadog's address. (Default: ```localhost:8125```)
 
+`TRAEFIK_METRICS_DATADOG_ADDROUTERSLABELS`:  
+Enable metrics on routers. (Default: ```false```)
+
 `TRAEFIK_METRICS_DATADOG_ADDSERVICESLABELS`:  
 Enable metrics on services. (Default: ```true```)
 
@@ -245,6 +248,9 @@ Enable metrics on entry points. (Default: ```true```)
 
 `TRAEFIK_METRICS_INFLUXDB_ADDRESS`:  
 InfluxDB address. (Default: ```localhost:8089```)
+
+`TRAEFIK_METRICS_INFLUXDB_ADDROUTERSLABELS`:  
+Enable metrics on routers. (Default: ```false```)
 
 `TRAEFIK_METRICS_INFLUXDB_ADDSERVICESLABELS`:  
 Enable metrics on services. (Default: ```true```)
@@ -273,6 +279,9 @@ Prometheus metrics exporter type. (Default: ```false```)
 `TRAEFIK_METRICS_PROMETHEUS_ADDENTRYPOINTSLABELS`:  
 Enable metrics on entry points. (Default: ```true```)
 
+`TRAEFIK_METRICS_PROMETHEUS_ADDROUTERSLABELS`:  
+Enable metrics on routers. (Default: ```false```)
+
 `TRAEFIK_METRICS_PROMETHEUS_ADDSERVICESLABELS`:  
 Enable metrics on services. (Default: ```true```)
 
@@ -293,6 +302,9 @@ Enable metrics on entry points. (Default: ```true```)
 
 `TRAEFIK_METRICS_STATSD_ADDRESS`:  
 StatsD address. (Default: ```localhost:8125```)
+
+`TRAEFIK_METRICS_STATSD_ADDROUTERSLABELS`:  
+Enable metrics on routers. (Default: ```false```)
 
 `TRAEFIK_METRICS_STATSD_ADDSERVICESLABELS`:  
 Enable metrics on services. (Default: ```true```)
@@ -526,7 +538,7 @@ KV Username
 Enable debug logging of generated configuration template. (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_FILE_DIRECTORY`:  
-Load dynamic configuration from one or more .toml or .yml files in a directory.
+Load dynamic configuration from one or more .yml or .toml files in a directory.
 
 `TRAEFIK_PROVIDERS_FILE_FILENAME`:  
 Load dynamic configuration from a file.
@@ -611,6 +623,9 @@ Kubernetes bearer token (not needed for in-cluster client).
 
 `TRAEFIK_PROVIDERS_KUBERNETESINGRESS`:  
 Enable Kubernetes backend with default settings. (Default: ```false```)
+
+`TRAEFIK_PROVIDERS_KUBERNETESINGRESS_ALLOWEMPTYSERVICES`:  
+Allow creation of services without endpoints. (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_KUBERNETESINGRESS_CERTAUTHFILEPATH`:  
 Kubernetes certificate authority file path (not needed for in-cluster client).
@@ -704,6 +719,9 @@ Display additional provider logs. (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_MARATHON_WATCH`:  
 Watch provider. (Default: ```true```)
+
+`TRAEFIK_PROVIDERS_PLUGIN_<NAME>`:  
+Plugins configuration.
 
 `TRAEFIK_PROVIDERS_PROVIDERSTHROTTLEDURATION`:  
 Backends throttle duration: minimum duration between 2 events from providers before applying a new configuration. It avoids unnecessary reloads if multiples events are sent in a short amount of time. (Default: ```2```)

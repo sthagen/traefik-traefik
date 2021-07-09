@@ -174,17 +174,17 @@ WriteTimeout is the maximum duration before timing out writes of the response. I
 `--entrypoints.<name>.udp.timeout`:  
 Timeout defines how long to wait on an idle session before releasing the related resources. (Default: ```3```)
 
-`--experimental.devplugin.gopath`:  
-plugin's GOPATH.
-
-`--experimental.devplugin.modulename`:  
-plugin's module name.
-
 `--experimental.http3`:  
 Enable HTTP3. (Default: ```false```)
 
 `--experimental.kubernetesgateway`:  
 Allow the Kubernetes gateway api provider usage. (Default: ```false```)
+
+`--experimental.localplugins.<name>`:  
+Local plugins configuration. (Default: ```false```)
+
+`--experimental.localplugins.<name>.modulename`:  
+plugin's module name.
 
 `--experimental.plugins.<name>.modulename`:  
 plugin's module name.
@@ -231,6 +231,9 @@ Enable metrics on entry points. (Default: ```true```)
 `--metrics.datadog.address`:  
 Datadog's address. (Default: ```localhost:8125```)
 
+`--metrics.datadog.addrouterslabels`:  
+Enable metrics on routers. (Default: ```false```)
+
 `--metrics.datadog.addserviceslabels`:  
 Enable metrics on services. (Default: ```true```)
 
@@ -245,6 +248,9 @@ Enable metrics on entry points. (Default: ```true```)
 
 `--metrics.influxdb.address`:  
 InfluxDB address. (Default: ```localhost:8089```)
+
+`--metrics.influxdb.addrouterslabels`:  
+Enable metrics on routers. (Default: ```false```)
 
 `--metrics.influxdb.addserviceslabels`:  
 Enable metrics on services. (Default: ```true```)
@@ -273,6 +279,9 @@ Prometheus metrics exporter type. (Default: ```false```)
 `--metrics.prometheus.addentrypointslabels`:  
 Enable metrics on entry points. (Default: ```true```)
 
+`--metrics.prometheus.addrouterslabels`:  
+Enable metrics on routers. (Default: ```false```)
+
 `--metrics.prometheus.addserviceslabels`:  
 Enable metrics on services. (Default: ```true```)
 
@@ -293,6 +302,9 @@ Enable metrics on entry points. (Default: ```true```)
 
 `--metrics.statsd.address`:  
 StatsD address. (Default: ```localhost:8125```)
+
+`--metrics.statsd.addrouterslabels`:  
+Enable metrics on routers. (Default: ```false```)
 
 `--metrics.statsd.addserviceslabels`:  
 Enable metrics on services. (Default: ```true```)
@@ -526,7 +538,7 @@ KV Username
 Enable debug logging of generated configuration template. (Default: ```false```)
 
 `--providers.file.directory`:  
-Load dynamic configuration from one or more .toml or .yml files in a directory.
+Load dynamic configuration from one or more .yml or .toml files in a directory.
 
 `--providers.file.filename`:  
 Load dynamic configuration from a file.
@@ -611,6 +623,9 @@ Kubernetes bearer token (not needed for in-cluster client).
 
 `--providers.kubernetesingress`:  
 Enable Kubernetes backend with default settings. (Default: ```false```)
+
+`--providers.kubernetesingress.allowemptyservices`:  
+Allow creation of services without endpoints. (Default: ```false```)
 
 `--providers.kubernetesingress.certauthfilepath`:  
 Kubernetes certificate authority file path (not needed for in-cluster client).
@@ -704,6 +719,9 @@ Display additional provider logs. (Default: ```false```)
 
 `--providers.marathon.watch`:  
 Watch provider. (Default: ```true```)
+
+`--providers.plugin.<name>`:  
+Plugins configuration.
 
 `--providers.providersthrottleduration`:  
 Backends throttle duration: minimum duration between 2 events from providers before applying a new configuration. It avoids unnecessary reloads if multiples events are sent in a short amount of time. (Default: ```2```)
