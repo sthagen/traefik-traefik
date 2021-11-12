@@ -147,6 +147,8 @@ func TestDo_dynamicConfiguration(t *testing.T) {
 					DialTimeout:           42,
 					ResponseHeaderTimeout: 42,
 					IdleConnTimeout:       42,
+					ReadIdleTimeout:       42,
+					PingTimeout:           42,
 				},
 			},
 		},
@@ -272,7 +274,7 @@ func TestDo_dynamicConfiguration(t *testing.T) {
 				},
 				ForwardAuth: &dynamic.ForwardAuth{
 					Address: "127.0.0.1",
-					TLS: &dynamic.ClientTLS{
+					TLS: &types.ClientTLS{
 						CA:                 "ca.pem",
 						CAOptional:         true,
 						Cert:               "cert.pem",
@@ -314,7 +316,7 @@ func TestDo_dynamicConfiguration(t *testing.T) {
 						NotAfter:  true,
 						NotBefore: true,
 						Sans:      true,
-						Subject: &dynamic.TLSCLientCertificateSubjectDNInfo{
+						Subject: &dynamic.TLSClientCertificateSubjectDNInfo{
 							Country:            true,
 							Province:           true,
 							Locality:           true,
@@ -324,7 +326,7 @@ func TestDo_dynamicConfiguration(t *testing.T) {
 							SerialNumber:       true,
 							DomainComponent:    true,
 						},
-						Issuer: &dynamic.TLSCLientCertificateIssuerDNInfo{
+						Issuer: &dynamic.TLSClientCertificateIssuerDNInfo{
 							Country:         true,
 							Province:        true,
 							Locality:        true,
@@ -912,11 +914,12 @@ func TestDo_staticConfiguration(t *testing.T) {
 	config.CertificatesResolvers = map[string]static.CertificateResolver{
 		"CertificateResolver0": {
 			ACME: &acme.Configuration{
-				Email:          "acme Email",
-				CAServer:       "CAServer",
-				PreferredChain: "foobar",
-				Storage:        "Storage",
-				KeyType:        "MyKeyType",
+				Email:                "acme Email",
+				CAServer:             "CAServer",
+				CertificatesDuration: 42,
+				PreferredChain:       "foobar",
+				Storage:              "Storage",
+				KeyType:              "MyKeyType",
 				DNSChallenge: &acme.DNSChallenge{
 					Provider:                "DNSProvider",
 					DelayBeforeCheck:        42,

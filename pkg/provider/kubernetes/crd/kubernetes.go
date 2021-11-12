@@ -25,6 +25,7 @@ import (
 	"github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
 	"github.com/traefik/traefik/v2/pkg/safe"
 	"github.com/traefik/traefik/v2/pkg/tls"
+	"github.com/traefik/traefik/v2/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -339,6 +340,20 @@ func (p *Provider) loadConfigurationFromCRD(ctx context.Context, client Client) 
 					logger.Errorf("Error while reading IdleConnTimeout: %v", err)
 				}
 			}
+
+			if serversTransport.Spec.ForwardingTimeouts.ReadIdleTimeout != nil {
+				err := forwardingTimeout.ReadIdleTimeout.Set(serversTransport.Spec.ForwardingTimeouts.ReadIdleTimeout.String())
+				if err != nil {
+					logger.Errorf("Error while reading ReadIdleTimeout: %v", err)
+				}
+			}
+
+			if serversTransport.Spec.ForwardingTimeouts.PingTimeout != nil {
+				err := forwardingTimeout.PingTimeout.Set(serversTransport.Spec.ForwardingTimeouts.PingTimeout.String())
+				if err != nil {
+					logger.Errorf("Error while reading PingTimeout: %v", err)
+				}
+			}
 		}
 
 		id := provider.Normalize(makeID(serversTransport.Namespace, serversTransport.Name))
@@ -483,7 +498,7 @@ func createForwardAuthMiddleware(k8sClient Client, namespace string, auth *v1alp
 		return forwardAuth, nil
 	}
 
-	forwardAuth.TLS = &dynamic.ClientTLS{
+	forwardAuth.TLS = &types.ClientTLS{
 		CAOptional:         auth.TLS.CAOptional,
 		InsecureSkipVerify: auth.TLS.InsecureSkipVerify,
 	}
