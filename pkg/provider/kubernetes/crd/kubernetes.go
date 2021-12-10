@@ -273,7 +273,8 @@ func (p *Provider) loadConfigurationFromCRD(ctx context.Context, client Client) 
 		id := provider.Normalize(makeID(middlewareTCP.Namespace, middlewareTCP.Name))
 
 		conf.TCP.Middlewares[id] = &dynamic.TCPMiddleware{
-			IPWhiteList: middlewareTCP.Spec.IPWhiteList,
+			InFlightConn: middlewareTCP.Spec.InFlightConn,
+			IPWhiteList:  middlewareTCP.Spec.IPWhiteList,
 		}
 	}
 
@@ -440,6 +441,10 @@ func createRateLimitMiddleware(rateLimit *v1alpha1.RateLimit) (*dynamic.RateLimi
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if rateLimit.SourceCriterion != nil {
+		rl.SourceCriterion = rateLimit.SourceCriterion
 	}
 
 	return rl, nil
