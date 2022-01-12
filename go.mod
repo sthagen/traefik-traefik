@@ -38,7 +38,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.3.0
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
-	github.com/instana/go-sensor v1.31.1
+	github.com/instana/go-sensor v1.38.3
 	github.com/klauspost/compress v1.13.0
 	github.com/lucas-clemente/quic-go v0.23.0
 	github.com/mailgun/ttlmap v0.0.0-20170619185759-c1c17f74874f
@@ -61,7 +61,7 @@ require (
 	github.com/stvp/go-udp-testing v0.0.0-20191102171040-06b61409b154
 	github.com/tinylib/msgp v1.0.2 // indirect
 	github.com/traefik/paerser v0.1.4
-	github.com/traefik/yaegi v0.11.1
+	github.com/traefik/yaegi v0.11.2
 	github.com/uber/jaeger-client-go v2.29.1+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible
 	github.com/unrolled/render v1.0.2
