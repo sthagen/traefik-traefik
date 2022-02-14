@@ -285,6 +285,36 @@ InfluxDB retention policy used when protocol is http.
 `--metrics.influxdb.username`:  
 InfluxDB username (only with http).
 
+`--metrics.influxdb2`:  
+InfluxDB v2 metrics exporter type. (Default: ```false```)
+
+`--metrics.influxdb2.addentrypointslabels`:  
+Enable metrics on entry points. (Default: ```true```)
+
+`--metrics.influxdb2.additionallabels.<name>`:  
+Additional labels (influxdb tags) on all metrics
+
+`--metrics.influxdb2.address`:  
+InfluxDB v2 address. (Default: ```http://localhost:8086```)
+
+`--metrics.influxdb2.addrouterslabels`:  
+Enable metrics on routers. (Default: ```false```)
+
+`--metrics.influxdb2.addserviceslabels`:  
+Enable metrics on services. (Default: ```true```)
+
+`--metrics.influxdb2.bucket`:  
+InfluxDB v2 bucket ID.
+
+`--metrics.influxdb2.org`:  
+InfluxDB v2 org ID.
+
+`--metrics.influxdb2.pushinterval`:  
+InfluxDB v2 push interval. (Default: ```10```)
+
+`--metrics.influxdb2.token`:  
+InfluxDB v2 access token.
+
 `--metrics.prometheus`:  
 Prometheus metrics exporter type. (Default: ```false```)
 
@@ -351,6 +381,9 @@ Enable Consul backend with default settings. (Default: ```false```)
 `--providers.consul.endpoints`:  
 KV store endpoints (Default: ```127.0.0.1:8500```)
 
+`--providers.consul.namespace`:  
+KV Namespace
+
 `--providers.consul.password`:  
 KV Password
 
@@ -371,6 +404,9 @@ TLS insecure skip verify (Default: ```false```)
 
 `--providers.consul.tls.key`:  
 TLS key
+
+`--providers.consul.token`:  
+KV Token
 
 `--providers.consul.username`:  
 KV Username
@@ -449,6 +485,9 @@ Name of the Traefik service in Consul Catalog (needs to be registered via the or
 
 `--providers.consulcatalog.stale`:  
 Use stale consistency for catalog reads. (Default: ```false```)
+
+`--providers.consulcatalog.watch`:  
+Watch Consul API events. (Default: ```false```)
 
 `--providers.docker`:  
 Enable Docker backend with default settings. (Default: ```false```)
@@ -534,6 +573,9 @@ Enable Etcd backend with default settings. (Default: ```false```)
 `--providers.etcd.endpoints`:  
 KV store endpoints (Default: ```127.0.0.1:2379```)
 
+`--providers.etcd.namespace`:  
+KV Namespace
+
 `--providers.etcd.password`:  
 KV Password
 
@@ -554,6 +596,9 @@ TLS insecure skip verify (Default: ```false```)
 
 `--providers.etcd.tls.key`:  
 TLS key
+
+`--providers.etcd.token`:  
+KV Token
 
 `--providers.etcd.username`:  
 KV Username
@@ -789,6 +834,9 @@ Enable Redis backend with default settings. (Default: ```false```)
 `--providers.redis.endpoints`:  
 KV store endpoints (Default: ```127.0.0.1:6379```)
 
+`--providers.redis.namespace`:  
+KV Namespace
+
 `--providers.redis.password`:  
 KV Password
 
@@ -810,6 +858,9 @@ TLS insecure skip verify (Default: ```false```)
 `--providers.redis.tls.key`:  
 TLS key
 
+`--providers.redis.token`:  
+KV Token
+
 `--providers.redis.username`:  
 KV Username
 
@@ -824,6 +875,9 @@ Enable ZooKeeper backend with default settings. (Default: ```false```)
 
 `--providers.zookeeper.endpoints`:  
 KV store endpoints (Default: ```127.0.0.1:2181```)
+
+`--providers.zookeeper.namespace`:  
+KV Namespace
 
 `--providers.zookeeper.password`:  
 KV Password
@@ -845,6 +899,9 @@ TLS insecure skip verify (Default: ```false```)
 
 `--providers.zookeeper.tls.key`:  
 TLS key
+
+`--providers.zookeeper.token`:  
+KV Token
 
 `--providers.zookeeper.username`:  
 KV Username

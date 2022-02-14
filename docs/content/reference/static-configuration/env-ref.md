@@ -252,6 +252,36 @@ Datadog push interval. (Default: ```10```)
 `TRAEFIK_METRICS_INFLUXDB`:  
 InfluxDB metrics exporter type. (Default: ```false```)
 
+`TRAEFIK_METRICS_INFLUXDB2`:  
+InfluxDB v2 metrics exporter type. (Default: ```false```)
+
+`TRAEFIK_METRICS_INFLUXDB2_ADDENTRYPOINTSLABELS`:  
+Enable metrics on entry points. (Default: ```true```)
+
+`TRAEFIK_METRICS_INFLUXDB2_ADDITIONALLABELS_<NAME>`:  
+Additional labels (influxdb tags) on all metrics
+
+`TRAEFIK_METRICS_INFLUXDB2_ADDRESS`:  
+InfluxDB v2 address. (Default: ```http://localhost:8086```)
+
+`TRAEFIK_METRICS_INFLUXDB2_ADDROUTERSLABELS`:  
+Enable metrics on routers. (Default: ```false```)
+
+`TRAEFIK_METRICS_INFLUXDB2_ADDSERVICESLABELS`:  
+Enable metrics on services. (Default: ```true```)
+
+`TRAEFIK_METRICS_INFLUXDB2_BUCKET`:  
+InfluxDB v2 bucket ID.
+
+`TRAEFIK_METRICS_INFLUXDB2_ORG`:  
+InfluxDB v2 org ID.
+
+`TRAEFIK_METRICS_INFLUXDB2_PUSHINTERVAL`:  
+InfluxDB v2 push interval. (Default: ```10```)
+
+`TRAEFIK_METRICS_INFLUXDB2_TOKEN`:  
+InfluxDB v2 access token.
+
 `TRAEFIK_METRICS_INFLUXDB_ADDENTRYPOINTSLABELS`:  
 Enable metrics on entry points. (Default: ```true```)
 
@@ -423,8 +453,14 @@ Name of the Traefik service in Consul Catalog (needs to be registered via the or
 `TRAEFIK_PROVIDERS_CONSULCATALOG_STALE`:  
 Use stale consistency for catalog reads. (Default: ```false```)
 
+`TRAEFIK_PROVIDERS_CONSULCATALOG_WATCH`:  
+Watch Consul API events. (Default: ```false```)
+
 `TRAEFIK_PROVIDERS_CONSUL_ENDPOINTS`:  
 KV store endpoints (Default: ```127.0.0.1:8500```)
+
+`TRAEFIK_PROVIDERS_CONSUL_NAMESPACE`:  
+KV Namespace
 
 `TRAEFIK_PROVIDERS_CONSUL_PASSWORD`:  
 KV Password
@@ -446,6 +482,9 @@ TLS insecure skip verify (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_CONSUL_TLS_KEY`:  
 TLS key
+
+`TRAEFIK_PROVIDERS_CONSUL_TOKEN`:  
+KV Token
 
 `TRAEFIK_PROVIDERS_CONSUL_USERNAME`:  
 KV Username
@@ -534,6 +573,9 @@ Enable Etcd backend with default settings. (Default: ```false```)
 `TRAEFIK_PROVIDERS_ETCD_ENDPOINTS`:  
 KV store endpoints (Default: ```127.0.0.1:2379```)
 
+`TRAEFIK_PROVIDERS_ETCD_NAMESPACE`:  
+KV Namespace
+
 `TRAEFIK_PROVIDERS_ETCD_PASSWORD`:  
 KV Password
 
@@ -554,6 +596,9 @@ TLS insecure skip verify (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_ETCD_TLS_KEY`:  
 TLS key
+
+`TRAEFIK_PROVIDERS_ETCD_TOKEN`:  
+KV Token
 
 `TRAEFIK_PROVIDERS_ETCD_USERNAME`:  
 KV Username
@@ -789,6 +834,9 @@ Enable Redis backend with default settings. (Default: ```false```)
 `TRAEFIK_PROVIDERS_REDIS_ENDPOINTS`:  
 KV store endpoints (Default: ```127.0.0.1:6379```)
 
+`TRAEFIK_PROVIDERS_REDIS_NAMESPACE`:  
+KV Namespace
+
 `TRAEFIK_PROVIDERS_REDIS_PASSWORD`:  
 KV Password
 
@@ -810,6 +858,9 @@ TLS insecure skip verify (Default: ```false```)
 `TRAEFIK_PROVIDERS_REDIS_TLS_KEY`:  
 TLS key
 
+`TRAEFIK_PROVIDERS_REDIS_TOKEN`:  
+KV Token
+
 `TRAEFIK_PROVIDERS_REDIS_USERNAME`:  
 KV Username
 
@@ -824,6 +875,9 @@ Enable ZooKeeper backend with default settings. (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_ZOOKEEPER_ENDPOINTS`:  
 KV store endpoints (Default: ```127.0.0.1:2181```)
+
+`TRAEFIK_PROVIDERS_ZOOKEEPER_NAMESPACE`:  
+KV Namespace
 
 `TRAEFIK_PROVIDERS_ZOOKEEPER_PASSWORD`:  
 KV Password
@@ -845,6 +899,9 @@ TLS insecure skip verify (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_ZOOKEEPER_TLS_KEY`:  
 TLS key
+
+`TRAEFIK_PROVIDERS_ZOOKEEPER_TOKEN`:  
+KV Token
 
 `TRAEFIK_PROVIDERS_ZOOKEEPER_USERNAME`:  
 KV Username
