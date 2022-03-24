@@ -228,12 +228,16 @@
 | `traefik/http/services/Service03/weighted/sticky/cookie/name` | `foobar` |
 | `traefik/http/services/Service03/weighted/sticky/cookie/sameSite` | `foobar` |
 | `traefik/http/services/Service03/weighted/sticky/cookie/secure` | `true` |
+| `traefik/http/services/Service04/failover/fallback` | `foobar` |
+| `traefik/http/services/Service04/failover/healthCheck` | `` |
+| `traefik/http/services/Service04/failover/service` | `foobar` |
 | `traefik/tcp/middlewares/Middleware00/ipWhiteList/sourceRange/0` | `foobar` |
 | `traefik/tcp/middlewares/Middleware00/ipWhiteList/sourceRange/1` | `foobar` |
 | `traefik/tcp/routers/TCPRouter0/entryPoints/0` | `foobar` |
 | `traefik/tcp/routers/TCPRouter0/entryPoints/1` | `foobar` |
 | `traefik/tcp/routers/TCPRouter0/middlewares/0` | `foobar` |
 | `traefik/tcp/routers/TCPRouter0/middlewares/1` | `foobar` |
+| `traefik/tcp/routers/TCPRouter0/priority` | `42` |
 | `traefik/tcp/routers/TCPRouter0/rule` | `foobar` |
 | `traefik/tcp/routers/TCPRouter0/service` | `foobar` |
 | `traefik/tcp/routers/TCPRouter0/tls/certResolver` | `foobar` |
@@ -249,6 +253,7 @@
 | `traefik/tcp/routers/TCPRouter1/entryPoints/1` | `foobar` |
 | `traefik/tcp/routers/TCPRouter1/middlewares/0` | `foobar` |
 | `traefik/tcp/routers/TCPRouter1/middlewares/1` | `foobar` |
+| `traefik/tcp/routers/TCPRouter1/priority` | `42` |
 | `traefik/tcp/routers/TCPRouter1/rule` | `foobar` |
 | `traefik/tcp/routers/TCPRouter1/service` | `foobar` |
 | `traefik/tcp/routers/TCPRouter1/tls/certResolver` | `foobar` |

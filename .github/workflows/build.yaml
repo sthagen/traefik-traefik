@@ -8,7 +8,7 @@ on:
 env:
   GO_VERSION: 1.17
   CGO_ENABLED: 0
-  PRE_TARGET: ""
+  IN_DOCKER: ""
 
 jobs:
 
@@ -23,7 +23,7 @@ jobs:
 
       - name: Build webui
         run: |
-          make generate-webui
+          make clean-webui generate-webui
           tar czvf webui.tar.gz ./webui/static/
 
       - name: Artifact webui

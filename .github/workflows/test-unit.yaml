@@ -7,7 +7,7 @@ on:
 
 env:
   GO_VERSION: 1.17
-  PRE_TARGET: ""
+  IN_DOCKER: ""
 
 jobs:
 
@@ -40,7 +40,7 @@ jobs:
           restore-keys: ${{ runner.os }}-test-unit-go-
 
       - name: Avoid generating webui
-        run: mkdir -p webui/static && touch webui/static/index.html
+        run: touch webui/static/index.html
 
       - name: Tests
         run: make test-unit

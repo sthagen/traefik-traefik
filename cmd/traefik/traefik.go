@@ -190,7 +190,7 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 
 	// Entrypoints
 
-	serverEntryPointsTCP, err := server.NewTCPEntryPoints(staticConfiguration.EntryPoints)
+	serverEntryPointsTCP, err := server.NewTCPEntryPoints(staticConfiguration.EntryPoints, staticConfiguration.HostResolver)
 	if err != nil {
 		return nil, err
 	}
@@ -215,6 +215,8 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 	}
 
 	if staticConfiguration.Pilot != nil {
+		log.WithoutContext().Warn("Traefik Pilot is deprecated and will be removed soon. Please check our Blog for migration instructions later this year")
+
 		version.PilotEnabled = staticConfiguration.Pilot.Dashboard
 	}
 
@@ -236,6 +238,19 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 		err = providerAggregator.AddProvider(p)
 		if err != nil {
 			return nil, fmt.Errorf("plugin: failed to add provider: %w", err)
+		}
+	}
+
+	// Traefik Hub
+
+	if staticConfiguration.Hub != nil {
+		if err = providerAggregator.AddProvider(staticConfiguration.Hub); err != nil {
+			return nil, fmt.Errorf("adding Traefik Hub provider: %w", err)
+		}
+
+		// API is mandatory for Traefik Hub to access the dynamic configuration.
+		if staticConfiguration.API == nil {
+			staticConfiguration.API = &static.API{}
 		}
 	}
 
@@ -321,7 +336,10 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 				continue
 			}
 
-			if _, ok := resolverNames[rt.TLS.CertResolver]; !ok {
+			if _, ok := resolverNames[rt.TLS.CertResolver]; !ok &&
+				// "traefik-hub" is an allowed certificate resolver name in a Traefik Hub Experimental feature context.
+				// It is used to activate its own certificate resolution, even though it is not a "classical" traefik certificate resolver.
+				(staticConfiguration.Hub == nil || rt.TLS.CertResolver != "traefik-hub") {
 				log.WithoutContext().Errorf("the router %s uses a non-existent resolver: %s", rtName, rt.TLS.CertResolver)
 			}
 		}
@@ -344,6 +362,11 @@ func getHTTPChallengeHandler(acmeProviders []*acme.Provider, httpChallengeProvid
 func getDefaultsEntrypoints(staticConfiguration *static.Configuration) []string {
 	var defaultEntryPoints []string
 	for name, cfg := range staticConfiguration.EntryPoints {
+		// Traefik Hub entryPoint should not be part of the set of default entryPoints.
+		if staticConfiguration.Hub != nil && staticConfiguration.Hub.EntryPoint == name {
+			continue
+		}
+
 		protocol, err := cfg.GetProtocol()
 		if err != nil {
 			// Should never happen because Traefik should not start if protocol is invalid.

@@ -135,6 +135,7 @@ nav:
         - 'InFlightConn': 'middlewares/tcp/inflightconn.md'
         - 'IpWhitelist': 'middlewares/tcp/ipwhitelist.md'
   - 'Plugins & Traefik Pilot': 'plugins/index.md'
+  - 'Traefik Hub': 'traefik-hub/index.md'
   - 'Operations':
       - 'CLI': 'operations/cli.md'
       - 'Dashboard' : 'operations/dashboard.md'
@@ -197,3 +198,6 @@ nav:
         - 'KV': 'reference/dynamic-configuration/kv.md'
         - 'Marathon': 'reference/dynamic-configuration/marathon.md'
         - 'Rancher': 'reference/dynamic-configuration/rancher.md'
+  - 'Deprecation Notices':
+      - 'Releases': 'deprecation/releases.md'
+      - 'Features': 'deprecation/features.md'

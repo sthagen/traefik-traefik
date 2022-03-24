@@ -51,7 +51,7 @@ Once positioned, this option sets (and resets) all the default values of the sub
 
 ### Configuration File
 
-At startup, Traefik searches for a file named `traefik.yml` (or `traefik.yaml` or `traefik.toml`) in:
+At startup, Traefik searches for static configuration in a file named `traefik.yml` (or `traefik.yaml` or `traefik.toml`) in:
 
 - `/etc/traefik/`
 - `$XDG_CONFIG_HOME/`
@@ -74,7 +74,7 @@ traefik --help
 # or
 
 docker run traefik[:version] --help
-# ex: docker run traefik:v2.6 --help
+# ex: docker run traefik:v2.7 --help
 ```
 
 All available arguments can also be found [here](../reference/static-configuration/cli.md).

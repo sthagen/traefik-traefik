@@ -4,7 +4,7 @@ go 1.16
 
 // github.com/docker/docker v17.12.0-ce-rc1.0.20200204220554-5f6d6f3f2203+incompatible => v19.03.6
 require (
-	github.com/BurntSushi/toml v0.3.1
+	github.com/BurntSushi/toml v1.0.0
 	github.com/ExpediaDotCom/haystack-client-go v0.0.0-20190315171017-e7edbdf53a61
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/Shopify/sarama v1.23.1 // indirect
@@ -12,7 +12,7 @@ require (
 	github.com/aws/aws-sdk-go v1.39.0
 	github.com/cenkalti/backoff/v4 v4.1.1
 	github.com/compose-spec/compose-go v1.0.3
-	github.com/containerd/containerd v1.5.8 // indirect
+	github.com/containerd/containerd v1.5.9 // indirect
 	github.com/containous/alice v0.0.0-20181107144136-d83ebdd94cbd
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/davecgh/go-spew v1.1.1
@@ -30,7 +30,7 @@ require (
 	github.com/google/go-github/v28 v28.1.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/hashicorp/consul v1.10.3
+	github.com/hashicorp/consul v1.10.4
 	github.com/hashicorp/consul/api v1.12.0
 	github.com/hashicorp/go-hclog v0.16.1
 	github.com/hashicorp/go-multierror v1.1.1
@@ -40,7 +40,7 @@ require (
 	github.com/instana/go-sensor v1.38.3
 	github.com/klauspost/compress v1.13.0
 	github.com/kvtools/valkeyrie v0.4.0
-	github.com/lucas-clemente/quic-go v0.23.0
+	github.com/lucas-clemente/quic-go v0.25.0
 	github.com/mailgun/ttlmap v0.0.0-20170619185759-c1c17f74874f
 	github.com/miekg/dns v1.1.45
 	github.com/mitchellh/copystructure v1.0.0
@@ -60,7 +60,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/stvp/go-udp-testing v0.0.0-20191102171040-06b61409b154
 	github.com/tinylib/msgp v1.0.2 // indirect
-	github.com/traefik/paerser v0.1.4
+	github.com/traefik/paerser v0.1.5
 	github.com/traefik/yaegi v0.11.2
 	github.com/uber/jaeger-client-go v2.29.1+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible

@@ -7,8 +7,6 @@ SHA := $(shell git rev-parse HEAD)
 VERSION_GIT := $(if $(TAG_NAME),$(TAG_NAME),$(SHA))
 VERSION := $(if $(VERSION),$(VERSION),$(VERSION_GIT))
 
-BIND_DIR := dist
-
 GIT_BRANCH := $(subst heads/,,$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null))
 TRAEFIK_DEV_IMAGE := traefik-dev$(if $(GIT_BRANCH),:$(subst /,-,$(GIT_BRANCH)))
 
@@ -29,22 +27,20 @@ TRAEFIK_ENVS := \
 	-e CI \
 	-e CONTAINER=DOCKER		# Indicator for integration tests that we are running inside a container.
 
-TRAEFIK_MOUNT := -v "$(CURDIR)/$(BIND_DIR):/go/src/github.com/traefik/traefik/$(BIND_DIR)"
+TRAEFIK_MOUNT := -v "$(CURDIR)/dist:/go/src/github.com/traefik/traefik/dist"
 DOCKER_RUN_OPTS := $(TRAEFIK_ENVS) $(TRAEFIK_MOUNT) "$(TRAEFIK_DEV_IMAGE)"
 DOCKER_NON_INTERACTIVE ?= false
 DOCKER_RUN_TRAEFIK := docker run $(INTEGRATION_OPTS) $(if $(DOCKER_NON_INTERACTIVE), , -it) $(DOCKER_RUN_OPTS)
 DOCKER_RUN_TRAEFIK_TEST := docker run --add-host=host.docker.internal:127.0.0.1 --rm --name=traefik --network traefik-test-network -v $(PWD):$(PWD) -w $(PWD) $(INTEGRATION_OPTS) $(if $(DOCKER_NON_INTERACTIVE), , -it) $(DOCKER_RUN_OPTS)
 DOCKER_RUN_TRAEFIK_NOTTY := docker run $(INTEGRATION_OPTS) $(if $(DOCKER_NON_INTERACTIVE), , -i) $(DOCKER_RUN_OPTS)
 
-PRE_TARGET ?= build-dev-image
-
-PLATFORM_URL := $(if $(PLATFORM_URL),$(PLATFORM_URL),"https://pilot.traefik.io")
+IN_DOCKER ?= true
 
 default: binary
 
 ## Build Dev Docker image
 build-dev-image: dist
-	docker build $(DOCKER_BUILD_ARGS) -t "$(TRAEFIK_DEV_IMAGE)" -f build.Dockerfile .
+	$(if $(IN_DOCKER),docker build $(DOCKER_BUILD_ARGS) -t "$(TRAEFIK_DEV_IMAGE)" -f build.Dockerfile .,)
 
 ## Build Dev Docker image without cache
 build-dev-image-no-cache: dist
@@ -52,25 +48,33 @@ build-dev-image-no-cache: dist
 
 ## Create the "dist" directory
 dist:
-	mkdir dist
+	mkdir -p dist
 
 ## Build WebUI Docker image
 build-webui-image:
-	docker build -t traefik-webui --build-arg ARG_PLATFORM_URL=$(PLATFORM_URL) -f webui/Dockerfile webui
+	docker build -t traefik-webui -f webui/Dockerfile webui
+
+## Clean WebUI static generated assets
+clean-webui:
+	rm -r webui/static
+	mkdir -p webui/static
+	echo 'For more information show `webui/readme.md`' > webui/static/DONT-EDIT-FILES-IN-THIS-DIRECTORY.md
 
 ## Generate WebUI
-generate-webui:
-	if [ ! -d "webui/static" ]; then \
-		$(MAKE) build-webui-image; \
-		mkdir -p webui/static; \
-		docker run --rm -v "$$PWD/webui/static":'/src/webui/static' traefik-webui npm run build:nc; \
-		docker run --rm -v "$$PWD/webui/static":'/src/webui/static' traefik-webui chown -R $(shell id -u):$(shell id -g) ./static; \
-		echo 'For more information show `webui/readme.md`' > $$PWD/webui/static/DONT-EDIT-FILES-IN-THIS-DIRECTORY.md; \
-	fi
+webui/static/index.html:
+	$(MAKE) build-webui-image
+	docker run --rm -v "$$PWD/webui/static":'/src/webui/static' traefik-webui yarn build:nc
+	docker run --rm -v "$$PWD/webui/static":'/src/webui/static' traefik-webui chown -R $(shell id -u):$(shell id -g) ./static
 
-## Build the linux binary
-binary: generate-webui $(PRE_TARGET)
-	$(if $(PRE_TARGET),$(DOCKER_RUN_TRAEFIK)) ./script/make.sh generate binary
+generate-webui: webui/static/index.html
+
+## Build the binary
+binary: generate-webui build-dev-image
+	$(if $(IN_DOCKER),$(DOCKER_RUN_TRAEFIK)) ./script/make.sh generate binary
+
+## Build the linux binary locally
+binary-debug: generate-webui
+	GOOS=linux ./script/make.sh binary
 
 ## Build the binary for the standard platforms (linux, darwin, windows)
 crossbinary-default: generate-webui build-dev-image
@@ -82,45 +86,48 @@ crossbinary-default-parallel:
 	$(MAKE) build-dev-image crossbinary-default
 
 ## Run the unit and integration tests
-test: $(PRE_TARGET)
+test: build-dev-image
 	-docker network create traefik-test-network --driver bridge --subnet 172.31.42.0/24
 	trap 'docker network rm traefik-test-network' EXIT; \
-	$(if $(PRE_TARGET),$(DOCKER_RUN_TRAEFIK_TEST),) ./script/make.sh generate test-unit binary test-integration
+	$(if $(IN_DOCKER),$(DOCKER_RUN_TRAEFIK_TEST),) ./script/make.sh generate test-unit binary test-integration
 
 ## Run the unit tests
-test-unit: $(PRE_TARGET)
+test-unit: build-dev-image
 	-docker network create traefik-test-network --driver bridge --subnet 172.31.42.0/24
 	trap 'docker network rm traefik-test-network' EXIT; \
-	$(if $(PRE_TARGET),$(DOCKER_RUN_TRAEFIK_TEST)) ./script/make.sh generate test-unit
+	$(if $(IN_DOCKER),$(DOCKER_RUN_TRAEFIK_TEST)) ./script/make.sh generate test-unit
 
 ## Run the integration tests
-test-integration: $(PRE_TARGET)
+test-integration: build-dev-image
 	-docker network create traefik-test-network --driver bridge --subnet 172.31.42.0/24
 	trap 'docker network rm traefik-test-network' EXIT; \
-	$(if $(PRE_TARGET),$(DOCKER_RUN_TRAEFIK_TEST),) ./script/make.sh generate binary test-integration
+	$(if $(IN_DOCKER),$(DOCKER_RUN_TRAEFIK_TEST),) ./script/make.sh generate binary test-integration
 
 ## Pull all images for integration tests
 pull-images:
 	grep --no-filename -E '^\s+image:' ./integration/resources/compose/*.yml | awk '{print $$2}' | sort | uniq | xargs -P 6 -n 1 docker pull
 
 ## Validate code and docs
-validate-files: $(PRE_TARGET)
-	$(if $(PRE_TARGET),$(DOCKER_RUN_TRAEFIK)) ./script/make.sh generate validate-lint validate-misspell
+validate-files: build-dev-image
+	$(if $(IN_DOCKER),$(DOCKER_RUN_TRAEFIK)) ./script/make.sh generate validate-lint validate-misspell
 	bash $(CURDIR)/script/validate-shell-script.sh
 
 ## Validate code, docs, and vendor
-validate: $(PRE_TARGET)
-	$(if $(PRE_TARGET),$(DOCKER_RUN_TRAEFIK)) ./script/make.sh generate validate-lint validate-misspell validate-vendor
+validate: build-dev-image
+	$(if $(IN_DOCKER),$(DOCKER_RUN_TRAEFIK)) ./script/make.sh generate validate-lint validate-misspell validate-vendor
 	bash $(CURDIR)/script/validate-shell-script.sh
 
 ## Clean up static directory and build a Docker Traefik image
-build-image: binary
-	rm -rf webui/static
+build-image: clean-webui binary
 	docker build -t $(TRAEFIK_IMAGE) .
 
 ## Build a Docker Traefik image
 build-image-dirty: binary
 	docker build -t $(TRAEFIK_IMAGE) .
+
+## Locally build traefik for linux, then shove it an alpine image, with basic tools.
+build-image-debug: binary-debug
+	docker build -t $(TRAEFIK_IMAGE) -f debug.Dockerfile .
 
 ## Start a shell inside the build env
 shell: build-dev-image
@@ -147,17 +154,17 @@ generate-genconf:
 	go run ./cmd/internal/gen/
 
 ## Create packages for the release
-release-packages: generate-webui $(PRE_TARGET)
+release-packages: generate-webui build-dev-image
 	rm -rf dist
-	$(if $(PRE_TARGET),$(DOCKER_RUN_TRAEFIK_NOTTY)) goreleaser release --skip-publish --timeout="90m"
-	$(if $(PRE_TARGET),$(DOCKER_RUN_TRAEFIK_NOTTY)) tar cfz dist/traefik-${VERSION}.src.tar.gz \
+	$(if $(IN_DOCKER),$(DOCKER_RUN_TRAEFIK_NOTTY)) goreleaser release --skip-publish --timeout="90m"
+	$(if $(IN_DOCKER),$(DOCKER_RUN_TRAEFIK_NOTTY)) tar cfz dist/traefik-${VERSION}.src.tar.gz \
 		--exclude-vcs \
 		--exclude .idea \
 		--exclude .travis \
 		--exclude .semaphoreci \
 		--exclude .github \
 		--exclude dist .
-	$(if $(PRE_TARGET),$(DOCKER_RUN_TRAEFIK_NOTTY)) chown -R $(shell id -u):$(shell id -g) dist/
+	$(if $(IN_DOCKER),$(DOCKER_RUN_TRAEFIK_NOTTY)) chown -R $(shell id -u):$(shell id -g) dist/
 
 ## Format the Code
 fmt:

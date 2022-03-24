@@ -45,7 +45,7 @@ $ ls dist/
 traefik*
 ```
 
-The following targets can be executed outside Docker by setting the variable `PRE_TARGET` to an empty string (we don't recommend that):
+The following targets can be executed outside Docker by setting the variable `IN_DOCKER` to an empty string (although be aware that some of the tests might fail in that context):
 
 - `test-unit`
 - `test-integration`
@@ -55,7 +55,7 @@ The following targets can be executed outside Docker by setting the variable `PR
 ex:
 
 ```bash
-PRE_TARGET= make test-unit
+IN_DOCKER= make test-unit
 ```
 
 ### Method 2: Using `go`
@@ -102,7 +102,7 @@ Once you've set up your go environment and cloned the source repository, you can
 
 ```bash
 # Generate UI static files
-rm -rf ./webui/static/; make generate-webui
+make clean-webui generate-webui
 
 # required to merge non-code components into the final binary,
 # such as the web dashboard/UI
