@@ -19,6 +19,7 @@ import (
 	"github.com/go-acme/lego/v4/challenge"
 	gokitmetrics "github.com/go-kit/kit/metrics"
 	"github.com/sirupsen/logrus"
+	"github.com/spiffe/go-spiffe/v2/workloadapi"
 	"github.com/traefik/paerser/cli"
 	"github.com/traefik/traefik/v2/cmd"
 	"github.com/traefik/traefik/v2/cmd/healthcheck"
@@ -257,7 +258,28 @@ func setupServer(staticConfiguration *static.Configuration) (*server.Server, err
 
 	// Service manager factory
 
-	roundTripperManager := service.NewRoundTripperManager()
+	var spiffeX509Source *workloadapi.X509Source
+	if staticConfiguration.Spiffe != nil && staticConfiguration.Spiffe.WorkloadAPIAddr != "" {
+		log.WithoutContext().
+			WithField("workloadAPIAddr", staticConfiguration.Spiffe.WorkloadAPIAddr).
+			Info("Waiting on SPIFFE SVID delivery")
+
+		spiffeX509Source, err = workloadapi.NewX509Source(
+			ctx,
+			workloadapi.WithClientOptions(
+				workloadapi.WithAddr(
+					staticConfiguration.Spiffe.WorkloadAPIAddr,
+				),
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create SPIFFE x509 source: %w", err)
+		}
+
+		log.WithoutContext().Info("Successfully obtained SPIFFE SVID.")
+	}
+
+	roundTripperManager := service.NewRoundTripperManager(spiffeX509Source)
 	acmeHTTPHandler := getHTTPChallengeHandler(acmeProviders, httpChallengeProvider)
 	managerFactory := service.NewManagerFactory(*staticConfiguration, routinesPool, metricsRegistry, roundTripperManager, acmeHTTPHandler)
 
@@ -366,8 +388,24 @@ func getHTTPChallengeHandler(acmeProviders []*acme.Provider, httpChallengeProvid
 
 func getDefaultsEntrypoints(staticConfiguration *static.Configuration) []string {
 	var defaultEntryPoints []string
+
+	// Determines if at least one EntryPoint is configured to be used by default.
+	var hasDefinedDefaults bool
+	for _, ep := range staticConfiguration.EntryPoints {
+		if ep.AsDefault {
+			hasDefinedDefaults = true
+			break
+		}
+	}
+
 	for name, cfg := range staticConfiguration.EntryPoints {
-		// Traefik Hub entryPoint should not be part of the set of default entryPoints.
+		// By default all entrypoints are considered.
+		// If at least one is flagged, then only flagged entrypoints are included.
+		if hasDefinedDefaults && !cfg.AsDefault {
+			continue
+		}
+
+		// Traefik Hub entryPoint should not be used as a default entryPoint.
 		if hub.APIEntrypoint == name || hub.TunnelEntrypoint == name {
 			continue
 		}

@@ -108,6 +108,9 @@ Entry points definition. (Default: ```false```)
 `TRAEFIK_ENTRYPOINTS_<NAME>_ADDRESS`:  
 Entry point address.
 
+`TRAEFIK_ENTRYPOINTS_<NAME>_ASDEFAULT`:  
+Adds this EntryPoint to the list of default EntryPoints to be used on routers that don't have any Entrypoint defined. (Default: ```false```)
+
 `TRAEFIK_ENTRYPOINTS_<NAME>_FORWARDEDHEADERS_INSECURE`:  
 Trust all forwarded headers. (Default: ```false```)
 
@@ -642,6 +645,9 @@ Enable HTTP backend with default settings. (Default: ```false```)
 `TRAEFIK_PROVIDERS_HTTP_ENDPOINT`:  
 Load configuration from this endpoint.
 
+`TRAEFIK_PROVIDERS_HTTP_HEADERS_<NAME>`:  
+Define custom headers to be sent to the endpoint.
+
 `TRAEFIK_PROVIDERS_HTTP_POLLINTERVAL`:  
 Polling interval for endpoint. (Default: ```5```)
 
@@ -977,6 +983,18 @@ If non-zero, controls the maximum idle (keep-alive) to keep per-host. If zero, D
 
 `TRAEFIK_SERVERSTRANSPORT_ROOTCAS`:  
 Add cert file for self-signed certificate.
+
+`TRAEFIK_SERVERSTRANSPORT_SPIFFE`:  
+Defines the SPIFFE configuration. (Default: ```false```)
+
+`TRAEFIK_SERVERSTRANSPORT_SPIFFE_IDS`:  
+Defines the allowed SPIFFE IDs (takes precedence over the SPIFFE TrustDomain).
+
+`TRAEFIK_SERVERSTRANSPORT_SPIFFE_TRUSTDOMAIN`:  
+Defines the allowed SPIFFE trust domain.
+
+`TRAEFIK_SPIFFE_WORKLOADAPIADDR`:  
+Defines the workload API address.
 
 `TRAEFIK_TRACING`:  
 OpenTracing configuration. (Default: ```false```)
