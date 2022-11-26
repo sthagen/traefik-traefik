@@ -56,16 +56,17 @@
           mode = "foobar"
           path = "foobar"
           method = "foobar"
+          status = 42
           port = 42
-          interval = "foobar"
-          timeout = "foobar"
+          interval = "42s"
+          timeout = "42s"
           hostname = "foobar"
           followRedirects = true
           [http.services.Service01.loadBalancer.healthCheck.headers]
             name0 = "foobar"
             name1 = "foobar"
         [http.services.Service01.loadBalancer.responseForwarding]
-          flushInterval = "foobar"
+          flushInterval = "42s"
     [http.services.Service02]
       [http.services.Service02.mirroring]
         service = "foobar"
@@ -158,7 +159,6 @@
         authRequestHeaders = ["foobar", "foobar"]
         [http.middlewares.Middleware09.forwardAuth.tls]
           ca = "foobar"
-          caOptional = true
           cert = "foobar"
           key = "foobar"
           insecureSkipVerify = true
@@ -174,10 +174,6 @@
         addVaryHeader = true
         allowedHosts = ["foobar", "foobar"]
         hostsProxyHeaders = ["foobar", "foobar"]
-        sslRedirect = true
-        sslTemporaryRedirect = true
-        sslHost = "foobar"
-        sslForceHost = true
         stsSeconds = 42
         stsIncludeSubdomains = true
         stsPreload = true
@@ -190,7 +186,6 @@
         contentSecurityPolicy = "foobar"
         publicKey = "foobar"
         referrerPolicy = "foobar"
-        featurePolicy = "foobar"
         permissionsPolicy = "foobar"
         isDevelopment = true
         [http.middlewares.Middleware10.headers.customRequestHeaders]
@@ -281,7 +276,6 @@
     [http.middlewares.Middleware21]
       [http.middlewares.Middleware21.stripPrefix]
         prefixes = ["foobar", "foobar"]
-        forceSlash = true
     [http.middlewares.Middleware22]
       [http.middlewares.Middleware22.stripPrefixRegex]
         regex = ["foobar", "foobar"]
@@ -457,7 +451,6 @@
       cipherSuites = ["foobar", "foobar"]
       curvePreferences = ["foobar", "foobar"]
       sniStrict = true
-      preferServerCipherSuites = true
       alpnProtocols = ["foobar", "foobar"]
       [tls.options.Options0.clientAuth]
         caFiles = ["foobar", "foobar"]
@@ -468,7 +461,6 @@
       cipherSuites = ["foobar", "foobar"]
       curvePreferences = ["foobar", "foobar"]
       sniStrict = true
-      preferServerCipherSuites = true
       alpnProtocols = ["foobar", "foobar"]
       [tls.options.Options1.clientAuth]
         caFiles = ["foobar", "foobar"]

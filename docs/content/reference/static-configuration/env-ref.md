@@ -246,6 +246,9 @@ The TLS key for Traefik Proxy as a TLS client.
 `TRAEFIK_LOG`:  
 Traefik log settings. (Default: ```false```)
 
+`TRAEFIK_LOG_COMPRESS`:  
+Determines if the rotated log files should be compressed using gzip. (Default: ```false```)
+
 `TRAEFIK_LOG_FILEPATH`:  
 Traefik log file path. Stdout is used when omitted or empty.
 
@@ -254,6 +257,18 @@ Traefik log format: json | common (Default: ```common```)
 
 `TRAEFIK_LOG_LEVEL`:  
 Log level set to traefik logs. (Default: ```ERROR```)
+
+`TRAEFIK_LOG_MAXAGE`:  
+Maximum number of days to retain old log files based on the timestamp encoded in their filename. (Default: ```0```)
+
+`TRAEFIK_LOG_MAXBACKUPS`:  
+Maximum number of old log files to retain. (Default: ```0```)
+
+`TRAEFIK_LOG_MAXSIZE`:  
+Maximum size in megabytes of the log file before it gets rotated. (Default: ```0```)
+
+`TRAEFIK_LOG_NOCOLOR`:  
+When using the 'common' format, disables the colorized output. (Default: ```false```)
 
 `TRAEFIK_METRICS_DATADOG`:  
 Datadog metrics exporter type. (Default: ```false```)
@@ -438,9 +453,6 @@ The URI scheme for the Consul server
 `TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_TLS_CA`:  
 TLS CA
 
-`TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_TLS_CAOPTIONAL`:  
-TLS CA.Optional (Default: ```false```)
-
 `TRAEFIK_PROVIDERS_CONSULCATALOG_ENDPOINT_TLS_CERT`:  
 TLS cert
 
@@ -455,9 +467,6 @@ Token is used to provide a per-request ACL token which overrides the agent's def
 
 `TRAEFIK_PROVIDERS_CONSULCATALOG_EXPOSEDBYDEFAULT`:  
 Expose containers by default. (Default: ```true```)
-
-`TRAEFIK_PROVIDERS_CONSULCATALOG_NAMESPACE`:  
-Sets the namespace used to discover services (Consul Enterprise only).
 
 `TRAEFIK_PROVIDERS_CONSULCATALOG_NAMESPACES`:  
 Sets the namespaces used to discover services (Consul Enterprise only).
@@ -483,9 +492,6 @@ Watch Consul API events. (Default: ```false```)
 `TRAEFIK_PROVIDERS_CONSUL_ENDPOINTS`:  
 KV store endpoints. (Default: ```127.0.0.1:8500```)
 
-`TRAEFIK_PROVIDERS_CONSUL_NAMESPACE`:  
-Sets the namespace used to discover the configuration (Consul Enterprise only).
-
 `TRAEFIK_PROVIDERS_CONSUL_NAMESPACES`:  
 Sets the namespaces used to discover the configuration (Consul Enterprise only).
 
@@ -494,9 +500,6 @@ Root key used for KV store. (Default: ```traefik```)
 
 `TRAEFIK_PROVIDERS_CONSUL_TLS_CA`:  
 TLS CA
-
-`TRAEFIK_PROVIDERS_CONSUL_TLS_CAOPTIONAL`:  
-TLS CA.Optional (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_CONSUL_TLS_CERT`:  
 TLS cert
@@ -542,9 +545,6 @@ Polling interval for swarm mode. (Default: ```15```)
 
 `TRAEFIK_PROVIDERS_DOCKER_TLS_CA`:  
 TLS CA
-
-`TRAEFIK_PROVIDERS_DOCKER_TLS_CAOPTIONAL`:  
-TLS CA.Optional (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_DOCKER_TLS_CERT`:  
 TLS cert
@@ -612,9 +612,6 @@ Root key used for KV store. (Default: ```traefik```)
 `TRAEFIK_PROVIDERS_ETCD_TLS_CA`:  
 TLS CA
 
-`TRAEFIK_PROVIDERS_ETCD_TLS_CAOPTIONAL`:  
-TLS CA.Optional (Default: ```false```)
-
 `TRAEFIK_PROVIDERS_ETCD_TLS_CERT`:  
 TLS cert
 
@@ -656,9 +653,6 @@ Polling timeout for endpoint. (Default: ```5```)
 
 `TRAEFIK_PROVIDERS_HTTP_TLS_CA`:  
 TLS CA
-
-`TRAEFIK_PROVIDERS_HTTP_TLS_CAOPTIONAL`:  
-TLS CA.Optional (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_HTTP_TLS_CERT`:  
 TLS cert
@@ -807,9 +801,6 @@ Set a TLS handshake timeout for Marathon. (Default: ```5```)
 `TRAEFIK_PROVIDERS_MARATHON_TLS_CA`:  
 TLS CA
 
-`TRAEFIK_PROVIDERS_MARATHON_TLS_CAOPTIONAL`:  
-TLS CA.Optional (Default: ```false```)
-
 `TRAEFIK_PROVIDERS_MARATHON_TLS_CERT`:  
 TLS cert
 
@@ -846,9 +837,6 @@ Nomad region to use. If not provided, the local agent region is used.
 `TRAEFIK_PROVIDERS_NOMAD_ENDPOINT_TLS_CA`:  
 TLS CA
 
-`TRAEFIK_PROVIDERS_NOMAD_ENDPOINT_TLS_CAOPTIONAL`:  
-TLS CA.Optional (Default: ```false```)
-
 `TRAEFIK_PROVIDERS_NOMAD_ENDPOINT_TLS_CERT`:  
 TLS cert
 
@@ -863,9 +851,6 @@ Token is used to provide a per-request ACL token.
 
 `TRAEFIK_PROVIDERS_NOMAD_EXPOSEDBYDEFAULT`:  
 Expose Nomad services by default. (Default: ```true```)
-
-`TRAEFIK_PROVIDERS_NOMAD_NAMESPACE`:  
-Sets the Nomad namespace used to discover services.
 
 `TRAEFIK_PROVIDERS_NOMAD_NAMESPACES`:  
 Sets the Nomad namespaces used to discover services.
@@ -929,9 +914,6 @@ Root key used for KV store. (Default: ```traefik```)
 
 `TRAEFIK_PROVIDERS_REDIS_TLS_CA`:  
 TLS CA
-
-`TRAEFIK_PROVIDERS_REDIS_TLS_CAOPTIONAL`:  
-TLS CA.Optional (Default: ```false```)
 
 `TRAEFIK_PROVIDERS_REDIS_TLS_CERT`:  
 TLS cert
@@ -1007,9 +989,6 @@ Sets the header name prefix used to store baggage items in a map.
 
 `TRAEFIK_TRACING_DATADOG_DEBUG`:  
 Enables Datadog debug. (Default: ```false```)
-
-`TRAEFIK_TRACING_DATADOG_GLOBALTAG`:  
-Sets a key:value tag on all spans.
 
 `TRAEFIK_TRACING_DATADOG_GLOBALTAGS_<NAME>`:  
 Sets a list of key:value tags on all spans.

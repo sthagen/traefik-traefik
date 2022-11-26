@@ -39,11 +39,14 @@ type key string
 
 const capturedData key = "capturedData"
 
-// Wrap returns a new handler that inserts a Capture into the given handler.
+// Wrap returns a new handler that inserts a Capture into the given handler for each incoming request.
 // It satisfies the alice.Constructor type.
-func Wrap(handler http.Handler) (http.Handler, error) {
-	c := Capture{}
-	return c.Reset(handler), nil
+func Wrap(next http.Handler) (http.Handler, error) {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		c := &Capture{}
+		newRW, newReq := c.renew(rw, req)
+		next.ServeHTTP(newRW, newReq)
+	}), nil
 }
 
 // FromContext returns the Capture value found in ctx, or an empty Capture otherwise.
@@ -62,39 +65,45 @@ func FromContext(ctx context.Context) (Capture, error) {
 // Capture is the object populated by the capture middleware,
 // holding probes that allow to gather information about the request and response.
 type Capture struct {
-	rr *readCounter
-	rw responseWriter
+	rr  *readCounter
+	crw *captureResponseWriter
 }
 
 // NeedsReset returns whether the given http.ResponseWriter is the capture's probe.
 func (c *Capture) NeedsReset(rw http.ResponseWriter) bool {
-	return c.rw != rw
+	// This comparison is naive.
+	return c.crw != rw
 }
 
 // Reset returns a new handler that renews the Capture's probes, and inserts
 // them when deferring to next.
 func (c *Capture) Reset(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		ctx := context.WithValue(req.Context(), capturedData, c)
-		newReq := req.WithContext(ctx)
-
-		if newReq.Body != nil {
-			readCounter := &readCounter{source: newReq.Body}
-			c.rr = readCounter
-			newReq.Body = readCounter
-		}
-		c.rw = newResponseWriter(rw)
-
-		next.ServeHTTP(c.rw, newReq)
+		newRW, newReq := c.renew(rw, req)
+		next.ServeHTTP(newRW, newReq)
 	})
 }
 
+func (c *Capture) renew(rw http.ResponseWriter, req *http.Request) (http.ResponseWriter, *http.Request) {
+	ctx := context.WithValue(req.Context(), capturedData, c)
+	newReq := req.WithContext(ctx)
+
+	if newReq.Body != nil {
+		readCounter := &readCounter{source: newReq.Body}
+		c.rr = readCounter
+		newReq.Body = readCounter
+	}
+	c.crw = &captureResponseWriter{rw: rw}
+
+	return c.crw, newReq
+}
+
 func (c *Capture) ResponseSize() int64 {
-	return c.rw.Size()
+	return c.crw.Size()
 }
 
 func (c *Capture) StatusCode() int {
-	return c.rw.Status()
+	return c.crw.Status()
 }
 
 // RequestSize returns the size of the request's body if it applies,
@@ -123,22 +132,7 @@ func (r *readCounter) Close() error {
 	return r.source.Close()
 }
 
-var _ middlewares.Stateful = &responseWriterWithCloseNotify{}
-
-type responseWriter interface {
-	http.ResponseWriter
-	Size() int64
-	Status() int
-}
-
-func newResponseWriter(rw http.ResponseWriter) responseWriter {
-	capt := &captureResponseWriter{rw: rw}
-	if _, ok := rw.(http.CloseNotifier); !ok {
-		return capt
-	}
-
-	return &responseWriterWithCloseNotify{capt}
-}
+var _ middlewares.Stateful = &captureResponseWriter{}
 
 // captureResponseWriter is a wrapper of type http.ResponseWriter
 // that tracks response status and size.
@@ -188,14 +182,4 @@ func (crw *captureResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) 
 	}
 
 	return nil, nil, fmt.Errorf("not a hijacker: %T", crw.rw)
-}
-
-type responseWriterWithCloseNotify struct {
-	*captureResponseWriter
-}
-
-// CloseNotify returns a channel that receives at most a
-// single value (true) when the client connection has gone away.
-func (r *responseWriterWithCloseNotify) CloseNotify() <-chan bool {
-	return r.rw.(http.CloseNotifier).CloseNotify()
 }
