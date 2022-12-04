@@ -8,6 +8,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -168,12 +169,12 @@ func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.
 		}
 
 		notify := func(err error, time time.Duration) {
-			logger.Error().Err(err).Msgf("Provider connection error, retrying in %s", time)
+			logger.Error().Err(err).Msgf("Provider error, retrying in %s", time)
 		}
 
 		err := backoff.RetryNotify(safe.OperationWithRecover(operation), backoff.WithContext(job.NewBackOff(backoff.NewExponentialBackOff()), ctxPool), notify)
 		if err != nil {
-			logger.Error().Err(err).Msg("Cannot connect to Provider")
+			logger.Error().Err(err).Msg("Cannot retrieve data")
 		}
 	})
 
@@ -400,10 +401,11 @@ func (p *Provider) shouldProcessIngress(ingress *networkingv1.Ingress, ingressCl
 
 func buildHostRule(host string) string {
 	if strings.HasPrefix(host, "*.") {
-		return "HostRegexp(`" + strings.Replace(host, "*.", "{subdomain:[a-zA-Z0-9-]+}.", 1) + "`)"
+		host = strings.Replace(regexp.QuoteMeta(host), `\*\.`, `[a-zA-Z0-9-]+\.`, 1)
+		return fmt.Sprintf("HostRegexp(`^%s$`)", host)
 	}
 
-	return "Host(`" + host + "`)"
+	return fmt.Sprintf("Host(`%s`)", host)
 }
 
 func getCertificates(ctx context.Context, ingress *networkingv1.Ingress, k8sClient Client, tlsConfigs map[string]*tls.CertAndStores) error {
