@@ -20,7 +20,7 @@ version: '3'
 services:
   reverse-proxy:
     # The official v2 Traefik docker image
-    image: traefik:v2.9
+    image: traefik:v3.0
     # Enables the web UI and tells Traefik to listen to docker
     command: --api.insecure=true --providers.docker
     ports:
@@ -50,7 +50,12 @@ Now that we have a Traefik instance up and running, we will deploy new services.
 Edit your `docker-compose.yml` file and add the following at the end of your file.
 
 ```yaml
-# ...
+version: '3'
+
+services:
+
+  ...
+
   whoami:
     # A container that exposes an API to show its IP address
     image: traefik/whoami
