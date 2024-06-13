@@ -204,12 +204,12 @@ func (s *K8sConformanceSuite) TestK8sGatewayAPIConformance() {
 			ksuite.SupportHTTPRouteSchemeRedirect,
 			ksuite.SupportHTTPRouteHostRewrite,
 			ksuite.SupportHTTPRoutePathRewrite,
+			ksuite.SupportHTTPRoutePathRedirect,
 		),
 		ExemptFeatures: sets.New(
 			ksuite.SupportHTTPRouteRequestTimeout,
 			ksuite.SupportHTTPRouteBackendTimeout,
 			ksuite.SupportHTTPRouteResponseHeaderModification,
-			ksuite.SupportHTTPRoutePathRedirect,
 			ksuite.SupportHTTPRouteRequestMirror,
 			ksuite.SupportHTTPRouteRequestMultipleMirrors,
 		),
@@ -219,8 +219,6 @@ func (s *K8sConformanceSuite) TestK8sGatewayAPIConformance() {
 		SkipTests: []string{
 			tests.HTTPRouteMethodMatching.ShortName,
 			tests.HTTPRouteQueryParamMatching.ShortName,
-			tests.HTTPRouteRewriteHost.ShortName,
-			tests.HTTPRouteRewritePath.ShortName,
 		},
 	}
 
