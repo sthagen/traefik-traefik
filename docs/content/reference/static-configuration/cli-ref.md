@@ -228,6 +228,12 @@ WriteTimeout is the maximum duration before timing out writes of the response. I
 `--entrypoints.<name>.udp.timeout`:  
 Timeout defines how long to wait on an idle session before releasing the related resources. (Default: ```3```)
 
+`--experimental.fastproxy`:  
+Enable the FastProxy implementation. (Default: ```false```)
+
+`--experimental.fastproxy.debug`:  
+Enable debug mode for the FastProxy implementation. (Default: ```false```)
+
 `--experimental.kubernetesgateway`:  
 (Deprecated) Allow the Kubernetes gateway api provider usage. (Default: ```false```)
 
@@ -911,6 +917,12 @@ Interval for polling Nomad API. (Default: ```15```)
 
 `--providers.nomad.stale`:  
 Use stale consistency for catalog reads. (Default: ```false```)
+
+`--providers.nomad.throttleduration`:  
+Watch throttle duration. (Default: ```0```)
+
+`--providers.nomad.watch`:  
+Watch Nomad Service events. (Default: ```false```)
 
 `--providers.plugin.<name>`:  
 Plugins configuration.

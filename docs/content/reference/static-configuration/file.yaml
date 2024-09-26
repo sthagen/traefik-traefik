@@ -236,6 +236,8 @@ providers:
     exposedByDefault: true
     refreshInterval: 42s
     allowEmptyServices: true
+    watch: true
+    throttleDuration: 42s
     namespaces:
       - foobar
       - foobar
@@ -572,6 +574,8 @@ experimental:
         mounts:
           - foobar
           - foobar
+  fastProxy:
+    debug: true
   kubernetesGateway: true
 core:
   defaultRuleSyntax: foobar
