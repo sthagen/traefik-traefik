@@ -264,6 +264,15 @@ HTTP/3 configuration. (Default: ```false```)
 `--entrypoints.<name>.http3.advertisedport`:  
 UDP port to advertise, on which HTTP/3 is available. (Default: ```0```)
 
+`--entrypoints.<name>.observability.accesslogs`:  
+ (Default: ```true```)
+
+`--entrypoints.<name>.observability.metrics`:  
+ (Default: ```true```)
+
+`--entrypoints.<name>.observability.tracing`:  
+ (Default: ```true```)
+
 `--entrypoints.<name>.proxyprotocol`:  
 Proxy-Protocol configuration. (Default: ```false```)
 
@@ -304,7 +313,7 @@ Timeout defines how long to wait on an idle session before releasing the related
 Defines whether all plugins must be loaded successfully for Traefik to start. (Default: ```false```)
 
 `--experimental.fastproxy`:  
-Enable the FastProxy implementation. (Default: ```false```)
+Enables the FastProxy implementation. (Default: ```false```)
 
 `--experimental.fastproxy.debug`:  
 Enable debug mode for the FastProxy implementation. (Default: ```false```)
@@ -326,6 +335,9 @@ Environment variables to forward to the wasm guest.
 
 `--experimental.localplugins.<name>.settings.mounts`:  
 Directory to mount to the wasm guest.
+
+`--experimental.otlplogs`:  
+Enables the OpenTelemetry logs integration. (Default: ```false```)
 
 `--experimental.plugins.<name>.modulename`:  
 plugin's module name.

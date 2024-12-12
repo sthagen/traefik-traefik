@@ -77,6 +77,10 @@
       advertisedPort = 42
     [entryPoints.EntryPoint0.udp]
       timeout = "42s"
+    [entryPoints.EntryPoint0.observability]
+      accessLogs = true
+      tracing = true
+      metrics = true
 
 [providers]
   providersThrottleDuration = "42s"
@@ -555,6 +559,7 @@
 
 [experimental]
   abortOnPluginFailure = true
+  otlplogs = true
   kubernetesGateway = true
   [experimental.plugins]
     [experimental.plugins.Descriptor0]

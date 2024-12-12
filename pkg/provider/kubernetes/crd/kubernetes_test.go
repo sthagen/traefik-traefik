@@ -1688,6 +1688,11 @@ func TestLoadIngressRoutes(t *testing.T) {
 							Service:     "default-test-route-6b204d94623b3df4370c",
 							Rule:        "Host(`foo.com`) && PathPrefix(`/bar`)",
 							Priority:    12,
+							Observability: &dynamic.RouterObservabilityConfig{
+								AccessLogs: pointer(true),
+								Tracing:    pointer(true),
+								Metrics:    pointer(true),
+							},
 						},
 					},
 					Middlewares: map[string]*dynamic.Middleware{},
@@ -3910,7 +3915,8 @@ func TestLoadIngressRoutes(t *testing.T) {
 						},
 						"default-forwardauth": {
 							ForwardAuth: &dynamic.ForwardAuth{
-								Address: "test.com",
+								Address:     "test.com",
+								MaxBodySize: pointer(int64(-1)),
 								TLS: &dynamic.ClientTLS{
 									CA:   "-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----",
 									Cert: "-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----",

@@ -264,6 +264,15 @@ Subject alternative names.
 `TRAEFIK_ENTRYPOINTS_<NAME>_HTTP_TLS_OPTIONS`:  
 Default TLS options for the routers linked to the entry point.
 
+`TRAEFIK_ENTRYPOINTS_<NAME>_OBSERVABILITY_ACCESSLOGS`:  
+ (Default: ```true```)
+
+`TRAEFIK_ENTRYPOINTS_<NAME>_OBSERVABILITY_METRICS`:  
+ (Default: ```true```)
+
+`TRAEFIK_ENTRYPOINTS_<NAME>_OBSERVABILITY_TRACING`:  
+ (Default: ```true```)
+
 `TRAEFIK_ENTRYPOINTS_<NAME>_PROXYPROTOCOL`:  
 Proxy-Protocol configuration. (Default: ```false```)
 
@@ -304,7 +313,7 @@ Timeout defines how long to wait on an idle session before releasing the related
 Defines whether all plugins must be loaded successfully for Traefik to start. (Default: ```false```)
 
 `TRAEFIK_EXPERIMENTAL_FASTPROXY`:  
-Enable the FastProxy implementation. (Default: ```false```)
+Enables the FastProxy implementation. (Default: ```false```)
 
 `TRAEFIK_EXPERIMENTAL_FASTPROXY_DEBUG`:  
 Enable debug mode for the FastProxy implementation. (Default: ```false```)
@@ -326,6 +335,9 @@ Environment variables to forward to the wasm guest.
 
 `TRAEFIK_EXPERIMENTAL_LOCALPLUGINS_<NAME>_SETTINGS_MOUNTS`:  
 Directory to mount to the wasm guest.
+
+`TRAEFIK_EXPERIMENTAL_OTLPLOGS`:  
+Enables the OpenTelemetry logs integration. (Default: ```false```)
 
 `TRAEFIK_EXPERIMENTAL_PLUGINS_<NAME>_MODULENAME`:  
 plugin's module name.
