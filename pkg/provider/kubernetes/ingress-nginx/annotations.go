@@ -19,6 +19,9 @@ type ingressConfig struct {
 	AuthSignin          *string `annotation:"nginx.ingress.kubernetes.io/auth-signin"`
 	AuthResponseHeaders *string `annotation:"nginx.ingress.kubernetes.io/auth-response-headers"`
 
+	AuthTLSSecret       *string `annotation:"nginx.ingress.kubernetes.io/auth-tls-secret"`
+	AuthTLSVerifyClient *string `annotation:"nginx.ingress.kubernetes.io/auth-tls-verify-client"`
+
 	ForceSSLRedirect *bool `annotation:"nginx.ingress.kubernetes.io/force-ssl-redirect"`
 	SSLRedirect      *bool `annotation:"nginx.ingress.kubernetes.io/ssl-redirect"`
 
@@ -32,6 +35,8 @@ type ingressConfig struct {
 	PermanentRedirectCode *int    `annotation:"nginx.ingress.kubernetes.io/permanent-redirect-code"`
 	TemporalRedirect      *string `annotation:"nginx.ingress.kubernetes.io/temporal-redirect"`
 	TemporalRedirectCode  *int    `annotation:"nginx.ingress.kubernetes.io/temporal-redirect-code"`
+
+	FromToWwwRedirect *bool `annotation:"nginx.ingress.kubernetes.io/from-to-www-redirect"`
 
 	Affinity              *string `annotation:"nginx.ingress.kubernetes.io/affinity"`
 	SessionCookieName     *string `annotation:"nginx.ingress.kubernetes.io/session-cookie-name"`
