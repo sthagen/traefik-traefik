@@ -18,8 +18,9 @@ type ingressConfig struct {
 	AuthSignin          *string `annotation:"nginx.ingress.kubernetes.io/auth-signin"`
 	AuthResponseHeaders *string `annotation:"nginx.ingress.kubernetes.io/auth-response-headers"`
 
-	AuthTLSSecret       *string `annotation:"nginx.ingress.kubernetes.io/auth-tls-secret"`
-	AuthTLSVerifyClient *string `annotation:"nginx.ingress.kubernetes.io/auth-tls-verify-client"`
+	AuthTLSSecret                    *string `annotation:"nginx.ingress.kubernetes.io/auth-tls-secret"`
+	AuthTLSVerifyClient              *string `annotation:"nginx.ingress.kubernetes.io/auth-tls-verify-client"`
+	AuthTLSPassCertificateToUpstream *bool   `annotation:"nginx.ingress.kubernetes.io/auth-tls-pass-certificate-to-upstream"`
 
 	ForceSSLRedirect *bool `annotation:"nginx.ingress.kubernetes.io/force-ssl-redirect"`
 	SSLRedirect      *bool `annotation:"nginx.ingress.kubernetes.io/ssl-redirect"`
@@ -50,11 +51,16 @@ type ingressConfig struct {
 
 	BackendProtocol *string `annotation:"nginx.ingress.kubernetes.io/backend-protocol"`
 
-	ProxySSLSecret      *string `annotation:"nginx.ingress.kubernetes.io/proxy-ssl-secret"`
-	ProxySSLVerify      *string `annotation:"nginx.ingress.kubernetes.io/proxy-ssl-verify"`
-	ProxySSLName        *string `annotation:"nginx.ingress.kubernetes.io/proxy-ssl-name"`
-	ProxySSLServerName  *string `annotation:"nginx.ingress.kubernetes.io/proxy-ssl-server-name"`
-	ProxyConnectTimeout *int    `annotation:"nginx.ingress.kubernetes.io/proxy-connect-timeout"`
+	ProxySSLSecret           *string `annotation:"nginx.ingress.kubernetes.io/proxy-ssl-secret"`
+	ProxySSLVerify           *string `annotation:"nginx.ingress.kubernetes.io/proxy-ssl-verify"`
+	ProxySSLName             *string `annotation:"nginx.ingress.kubernetes.io/proxy-ssl-name"`
+	ProxySSLServerName       *string `annotation:"nginx.ingress.kubernetes.io/proxy-ssl-server-name"`
+	ProxyConnectTimeout      *int    `annotation:"nginx.ingress.kubernetes.io/proxy-connect-timeout"`
+	ProxyReadTimeout         *int    `annotation:"nginx.ingress.kubernetes.io/proxy-read-timeout"`
+	ProxySendTimeout         *int    `annotation:"nginx.ingress.kubernetes.io/proxy-send-timeout"`
+	ProxyNextUpstream        *string `annotation:"nginx.ingress.kubernetes.io/proxy-next-upstream"`
+	ProxyNextUpstreamTries   *int    `annotation:"nginx.ingress.kubernetes.io/proxy-next-upstream-tries"`
+	ProxyNextUpstreamTimeout *int    `annotation:"nginx.ingress.kubernetes.io/proxy-next-upstream-timeout"`
 
 	EnableCORS                 *bool     `annotation:"nginx.ingress.kubernetes.io/enable-cors"`
 	EnableCORSAllowCredentials *bool     `annotation:"nginx.ingress.kubernetes.io/cors-allow-credentials"`
@@ -69,6 +75,9 @@ type ingressConfig struct {
 
 	CustomHeaders *string `annotation:"nginx.ingress.kubernetes.io/custom-headers"`
 	UpstreamVhost *string `annotation:"nginx.ingress.kubernetes.io/upstream-vhost"`
+
+	CustomHTTPErrors *[]string `annotation:"nginx.ingress.kubernetes.io/custom-http-errors"`
+	DefaultBackend   *string   `annotation:"nginx.ingress.kubernetes.io/default-backend"`
 
 	// ProxyRequestBuffering controls whether request buffering is enabled.
 	ProxyRequestBuffering *string `annotation:"nginx.ingress.kubernetes.io/proxy-request-buffering"`
