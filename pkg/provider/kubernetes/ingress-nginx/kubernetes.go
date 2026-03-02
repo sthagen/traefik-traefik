@@ -342,9 +342,7 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 		}
 
 		for _, rule := range ing.Spec.Rules {
-			if !hosts[rule.Host] {
-				hosts[rule.Host] = true
-			}
+			hosts[strings.ToLower(rule.Host)] = true
 		}
 	}
 
@@ -390,7 +388,7 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 			clientAuthTLSOptionName = tlsOptName
 		}
 
-		namedServersTransport, err := p.buildServersTransport(ingress.Namespace, ingress.Name, ingressConfig)
+		namedServersTransport, err := p.buildServersTransport(ctxIngress, ingress.Namespace, ingress.Name, ingressConfig)
 		if err != nil {
 			logger.Error().Err(err).Msg("Ignoring Ingress cannot create proxy SSL configuration")
 			continue
@@ -576,7 +574,7 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 				}
 
 				rt := &dynamic.Router{
-					Rule: buildRule(rule.Host, pa, ingressConfig),
+					Rule: buildRule(ctxIngress, rule.Host, pa, ingressConfig, hosts),
 					// "default" stands for the default rule syntax in Traefik v3, i.e. the v3 syntax.
 					RuleSyntax: "default",
 					Service:    serviceName,
@@ -617,7 +615,7 @@ func (p *Provider) loadConfiguration(ctx context.Context) *dynamic.Configuration
 	return conf
 }
 
-func (p *Provider) buildServersTransport(namespace, name string, cfg ingressConfig) (*namedServersTransport, error) {
+func (p *Provider) buildServersTransport(ctx context.Context, namespace, name string, cfg ingressConfig) (*namedServersTransport, error) {
 	proxyConnectTimeout := ptr.Deref(cfg.ProxyConnectTimeout, p.ProxyConnectTimeout)
 	proxyReadTimeout := ptr.Deref(cfg.ProxyReadTimeout, p.ProxyReadTimeout)
 	proxySendTimeout := ptr.Deref(cfg.ProxySendTimeout, p.ProxySendTimeout)
@@ -630,6 +628,17 @@ func (p *Provider) buildServersTransport(namespace, name string, cfg ingressConf
 				WriteTimeout: ptypes.Duration(time.Duration(proxySendTimeout) * time.Second),
 			},
 		},
+	}
+
+	if proxyHTTPVersion := ptr.Deref(cfg.ProxyHTTPVersion, ""); proxyHTTPVersion != "" {
+		switch proxyHTTPVersion {
+		case "1.1":
+			nst.ServersTransport.DisableHTTP2 = true
+		case "1.0":
+			log.Ctx(ctx).Warn().Msg("Value '1.0' is not supported with proxy-http-version, ignoring annotation")
+		default:
+			log.Ctx(ctx).Warn().Msgf("Invalid proxy-http-version value: %q, ignoring annotation", proxyHTTPVersion)
+		}
 	}
 
 	if scheme := parseBackendProtocol(ptr.Deref(cfg.BackendProtocol, "HTTP")); scheme != "https" {
@@ -1014,8 +1023,6 @@ func (p *Provider) applyCustomHTTPErrors(namespace, ingressName, routerName stri
 		return errors.New("targeted ingress backend has no service")
 	}
 
-	// TODO: here we always use the default backend as a fallback, but it is not guaranteed to be created,
-	// so we should check if it exists before and create a dummy service if not, which is too complicated to check without pre computed model.
 	serviceName := defaultBackendName
 	if defaultBackend := ptr.Deref(config.DefaultBackend, ""); defaultBackend != "" {
 		backend := netv1.IngressBackend{Service: &netv1.IngressServiceBackend{Name: defaultBackend}}
@@ -1026,6 +1033,10 @@ func (p *Provider) applyCustomHTTPErrors(namespace, ingressName, routerName stri
 
 		serviceName = fmt.Sprintf("default-backend-%s", routerName)
 		conf.HTTP.Services[serviceName] = service
+	} else if _, ok := conf.HTTP.Services[defaultBackendName]; !ok {
+		// No default backend available (no annotation and no global default).
+		// Skip the middleware — matches nginx behavior where errors pass through.
+		return nil
 	}
 
 	k8sServiceName := targetedService.Service.Name
@@ -1193,6 +1204,7 @@ func applyFromToWwwRedirect(hosts map[string]bool, ruleHost, routerName string, 
 		return
 	}
 
+	ruleHost = strings.ToLower(ruleHost)
 	wwwType := strings.HasPrefix(ruleHost, "www.")
 	wildcardType := strings.HasPrefix(ruleHost, "*.")
 	bypass := wwwType && hosts[strings.TrimPrefix(ruleHost, "www.")] || !wwwType && hosts["www."+ruleHost] || wildcardType
@@ -1691,10 +1703,32 @@ func basicAuthUsers(secret *corev1.Secret, authSecretType string) (dynamic.Users
 	return users, nil
 }
 
-func buildRule(host string, pa netv1.HTTPIngressPath, config ingressConfig) string {
+func buildRule(ctx context.Context, host string, pa netv1.HTTPIngressPath, config ingressConfig, allHosts map[string]bool) string {
 	var rules []string
-	if len(host) > 0 {
-		rules = append(rules, buildHostRule(host))
+	if host != "" {
+		hosts := []string{host}
+		if config.ServerAlias != nil {
+			for _, alias := range *config.ServerAlias {
+				if _, ok := allHosts[strings.ToLower(alias)]; ok {
+					log.Ctx(ctx).Debug().
+						Str("alias", alias).
+						Msg("Skipping server-alias because it is already defined as a host in another Ingress")
+					continue
+				}
+				hosts = append(hosts, alias)
+			}
+		}
+
+		var hostRules []string
+		for _, h := range hosts {
+			hostRules = append(hostRules, buildHostRule(h))
+		}
+
+		if len(hostRules) > 1 {
+			rules = append(rules, "("+strings.Join(hostRules, " || ")+")")
+		} else {
+			rules = append(rules, hostRules[0])
+		}
 	}
 
 	if len(pa.Path) > 0 {
