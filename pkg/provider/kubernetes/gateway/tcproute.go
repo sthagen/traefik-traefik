@@ -19,7 +19,7 @@ import (
 	gatev1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
-func (p *Provider) loadTCPRoutes(ctx context.Context, gatewayListeners []gatewayListener, conf *dynamic.Configuration) {
+func (p *Provider) loadTCPRoutes(ctx context.Context, gatewayListeners []gatewayListener, conf *dynamic.Configuration, statusReport *statusReport) {
 	logger := log.Ctx(ctx)
 	routes, err := p.client.ListTCPRoutes()
 	if err != nil {
@@ -28,19 +28,13 @@ func (p *Provider) loadTCPRoutes(ctx context.Context, gatewayListeners []gateway
 	}
 
 	for _, route := range routes {
-		logger := log.Ctx(ctx).With().
-			Str("tcp_route", route.Name).
-			Str("namespace", route.Namespace).
-			Logger()
-
 		routeListeners := matchingGatewayListeners(gatewayListeners, route.Namespace, route.Spec.ParentRefs)
 		if len(routeListeners) == 0 {
 			continue
 		}
 
-		var parentStatuses []gatev1alpha2.RouteParentStatus
 		for _, parentRef := range route.Spec.ParentRefs {
-			parentStatus := &gatev1alpha2.RouteParentStatus{
+			parentStatus := gatev1alpha2.RouteParentStatus{
 				ParentRef:      parentRef,
 				ControllerName: controllerName,
 				Conditions: []metav1.Condition{
@@ -77,18 +71,7 @@ func (p *Provider) loadTCPRoutes(ctx context.Context, gatewayListeners []gateway
 				parentStatus.Conditions = upsertRouteConditionResolvedRefs(parentStatus.Conditions, resolveRefCondition)
 			}
 
-			parentStatuses = append(parentStatuses, *parentStatus)
-		}
-
-		routeStatus := gatev1alpha2.TCPRouteStatus{
-			RouteStatus: gatev1alpha2.RouteStatus{
-				Parents: parentStatuses,
-			},
-		}
-		if err := p.client.UpdateTCPRouteStatus(ctx, ktypes.NamespacedName{Namespace: route.Namespace, Name: route.Name}, routeStatus); err != nil {
-			logger.Warn().
-				Err(err).
-				Msg("Unable to update TCPRoute status")
+			statusReport.RecordTCPRouteStatus(ktypes.NamespacedName{Namespace: route.Namespace, Name: route.Name}, parentStatus)
 		}
 	}
 }
@@ -221,6 +204,17 @@ func (p *Provider) loadTCPService(route *gatev1alpha2.TCPRoute, backendRef gatev
 	namespace := route.Namespace
 	if backendRef.Namespace != nil && *backendRef.Namespace != "" {
 		namespace = string(*backendRef.Namespace)
+
+		if strings.Contains(string(backendRef.Name), "@") {
+			return provider.Normalize(namespace + "-" + string(backendRef.Name)), nil, &metav1.Condition{
+				Type:               string(gatev1.RouteConditionResolvedRefs),
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: route.Generation,
+				LastTransitionTime: metav1.Now(),
+				Reason:             string(gatev1.RouteReasonRefNotPermitted),
+				Message:            fmt.Sprintf("Cannot load TCPRoute BackendRef %s/%s/%s/%s: namespace is not allowed with a cross-provider reference", group, kind, namespace, backendRef.Name),
+			}
+		}
 	}
 
 	serviceName := provider.Normalize(namespace + "-" + string(backendRef.Name))
@@ -347,4 +341,9 @@ func mergeTCPConfiguration(from, to *dynamic.Configuration) {
 		to.TCP.Services = map[string]*dynamic.TCPService{}
 	}
 	maps.Copy(to.TCP.Services, from.TCP.Services)
+
+	if to.TCP.ServersTransports == nil {
+		to.TCP.ServersTransports = map[string]*dynamic.TCPServersTransport{}
+	}
+	maps.Copy(to.TCP.ServersTransports, from.TCP.ServersTransports)
 }

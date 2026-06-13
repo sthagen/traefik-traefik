@@ -49,6 +49,8 @@ const (
 	kindTCPRoute       = "TCPRoute"
 	kindTLSRoute       = "TLSRoute"
 	kindService        = "Service"
+	kindConfigMap      = "ConfigMap"
+	kindSecret         = "Secret"
 
 	appProtocolHTTP  = "http"
 	appProtocolHTTPS = "https"
@@ -222,20 +224,29 @@ func (p *Provider) Provide(configurationChan chan<- dynamic.Message, pool *safe.
 					// Note that event is the *first* event that came in during this throttling interval -- if we're hitting our throttle, we may have dropped events.
 					// This is fine, because we don't treat different event types differently.
 					// But if we do in the future, we'll need to track more information about the dropped events.
-					conf := p.loadConfigurationFromGateways(ctxLog)
-
-					confHash, err := hashstructure.Hash(conf, nil)
-					switch {
-					case err != nil:
-						logger.Error().Msg("Unable to hash the configuration")
-					case p.lastConfiguration.Get() == confHash:
-						logger.Debug().Msgf("Skipping Kubernetes event kind %T", event)
-					default:
-						p.lastConfiguration.Set(confHash)
-						configurationChan <- dynamic.Message{
-							ProviderName:  ProviderName,
-							Configuration: conf,
+					conf, statusReport, err := p.loadConfigurationFromGateways(ctxLog)
+					if err != nil {
+						logger.Error().Err(err).Msg("Unable to load configuration from Gateways")
+					} else {
+						confHash, err := hashstructure.Hash(conf, nil)
+						switch {
+						case err != nil:
+							logger.Error().Msg("Unable to hash the configuration")
+						case p.lastConfiguration.Get() == confHash:
+							logger.Debug().Msgf("Skipping Kubernetes event kind %T", event)
+						default:
+							p.lastConfiguration.Set(confHash)
+							configurationChan <- dynamic.Message{
+								ProviderName:  ProviderName,
+								Configuration: conf,
+							}
 						}
+
+						// Flush regardless of whether the dynamic configuration changed: the
+						// statusReport is independent of confHash and may carry writes even
+						// when the data plane has nothing new to consume (e.g. a GatewayClass
+						// that's now Accepted but has no Gateway pointing at it yet).
+						statusReport.Flush(ctxLog, p.client)
 					}
 
 					// If we're throttling,
@@ -302,7 +313,8 @@ func (p *Provider) newK8sClient(ctx context.Context) (*clientWrapper, error) {
 }
 
 // TODO Handle errors and update resources statuses (gatewayClass, gateway).
-func (p *Provider) loadConfigurationFromGateways(ctx context.Context) *dynamic.Configuration {
+func (p *Provider) loadConfigurationFromGateways(ctx context.Context) (*dynamic.Configuration, *statusReport, error) {
+	statusReport := newStatusReport()
 	conf := &dynamic.Configuration{
 		HTTP: &dynamic.HTTPConfiguration{
 			Routers:           map[string]*dynamic.Router{},
@@ -325,14 +337,12 @@ func (p *Provider) loadConfigurationFromGateways(ctx context.Context) *dynamic.C
 
 	addresses, err := p.gatewayAddresses()
 	if err != nil {
-		log.Ctx(ctx).Error().Err(err).Msg("Unable to get Gateway status addresses")
-		return nil
+		return nil, nil, fmt.Errorf("getting gateway addresses: %w", err)
 	}
 
 	gatewayClasses, err := p.client.ListGatewayClasses()
 	if err != nil {
-		log.Ctx(ctx).Error().Err(err).Msg("Unable to list GatewayClasses")
-		return nil
+		return nil, nil, fmt.Errorf("listing gateway classes: %w", err)
 	}
 
 	var supportedFeatures []gatev1.SupportedFeature
@@ -363,13 +373,7 @@ func (p *Provider) loadConfigurationFromGateways(ctx context.Context) *dynamic.C
 			SupportedFeatures: supportedFeatures,
 		}
 
-		if err := p.client.UpdateGatewayClassStatus(ctx, gatewayClass.Name, status); err != nil {
-			log.Ctx(ctx).
-				Warn().
-				Err(err).
-				Str("gateway_class", gatewayClass.Name).
-				Msg("Unable to update GatewayClass status")
-		}
+		statusReport.RecordGatewayClassStatus(gatewayClass.Name, status)
 	}
 
 	var gateways []*gatev1.Gateway
@@ -390,14 +394,14 @@ func (p *Provider) loadConfigurationFromGateways(ctx context.Context) *dynamic.C
 		gatewayListeners = append(gatewayListeners, p.loadGatewayListeners(logger.WithContext(ctx), gateway, conf)...)
 	}
 
-	p.loadHTTPRoutes(ctx, gatewayListeners, conf)
+	p.loadHTTPRoutes(ctx, gatewayListeners, conf, statusReport)
 
-	p.loadGRPCRoutes(ctx, gatewayListeners, conf)
+	p.loadGRPCRoutes(ctx, gatewayListeners, conf, statusReport)
 
-	p.loadTLSRoutes(ctx, gatewayListeners, conf)
+	p.loadTLSRoutes(ctx, gatewayListeners, conf, statusReport)
 
 	if p.ExperimentalChannel {
-		p.loadTCPRoutes(ctx, gatewayListeners, conf)
+		p.loadTCPRoutes(ctx, gatewayListeners, conf, statusReport)
 	}
 
 	for _, gateway := range gateways {
@@ -428,14 +432,10 @@ func (p *Provider) loadConfigurationFromGateways(ctx context.Context) *dynamic.C
 				Msg("Gateway Not Accepted")
 		}
 
-		if err = p.client.UpdateGatewayStatus(ctx, ktypes.NamespacedName{Name: gateway.Name, Namespace: gateway.Namespace}, gatewayStatus); err != nil {
-			logger.Warn().
-				Err(err).
-				Msg("Unable to update Gateway status")
-		}
+		statusReport.RecordGatewayStatus(ktypes.NamespacedName{Name: gateway.Name, Namespace: gateway.Namespace}, gatewayStatus)
 	}
 
-	return conf
+	return conf, statusReport, nil
 }
 
 func (p *Provider) loadGatewayListeners(ctx context.Context, gateway *gatev1.Gateway, conf *dynamic.Configuration) []gatewayListener {
@@ -591,7 +591,7 @@ func (p *Provider) loadGatewayListeners(ctx context.Context, gateway *gatev1.Gat
 				var errCertConditions []metav1.Condition
 				listenerTLSCerts := make(map[string]*tls.CertAndStores)
 				for _, certificateRef := range listener.TLS.CertificateRefs {
-					if certificateRef.Kind == nil || *certificateRef.Kind != "Secret" || certificateRef.Group == nil || (*certificateRef.Group != "" && *certificateRef.Group != groupCore) {
+					if certificateRef.Kind == nil || *certificateRef.Kind != kindSecret || certificateRef.Group == nil || (*certificateRef.Group != "" && *certificateRef.Group != groupCore) {
 						errCertConditions = append(errCertConditions, metav1.Condition{
 							Type:               string(gatev1.ListenerConditionResolvedRefs),
 							Status:             metav1.ConditionFalse,
@@ -604,7 +604,7 @@ func (p *Provider) loadGatewayListeners(ctx context.Context, gateway *gatev1.Gat
 					}
 
 					certificateNamespace := string(ptr.Deref(certificateRef.Namespace, gatev1.Namespace(gateway.Namespace)))
-					if err := p.isReferenceGranted(kindGateway, gateway.Namespace, groupCore, "Secret", string(certificateRef.Name), certificateNamespace); err != nil {
+					if err := p.isReferenceGranted(kindGateway, gateway.Namespace, groupCore, kindSecret, string(certificateRef.Name), certificateNamespace); err != nil {
 						errCertConditions = append(errCertConditions, metav1.Condition{
 							Type:               string(gatev1.ListenerConditionResolvedRefs),
 							Status:             metav1.ConditionFalse,

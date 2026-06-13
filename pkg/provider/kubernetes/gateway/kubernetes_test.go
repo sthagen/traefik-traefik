@@ -95,7 +95,10 @@ func TestGatewayClassLabelSelector(t *testing.T) {
 		client:        client,
 	}
 
-	_ = p.loadConfigurationFromGateways(t.Context())
+	_, statusReport, err := p.loadConfigurationFromGateways(t.Context())
+	require.NoError(t, err)
+
+	statusReport.Flush(t.Context(), p.client)
 
 	gw, err := gwClient.GatewayV1().Gateways("default").Get(t.Context(), "traefik-external", metav1.GetOptions{})
 	require.NoError(t, err)
@@ -2753,7 +2756,9 @@ func TestLoadHTTPRoutes(t *testing.T) {
 				client:              client,
 			}
 
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			require.NoError(t, err)
+
 			assert.Equal(t, test.expected, conf)
 		})
 	}
@@ -3216,7 +3221,9 @@ func TestLoadHTTPRoutes_backendExtensionRef(t *testing.T) {
 					p.RegisterBackendFuncs(group, kind, backendFunc)
 				}
 			}
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			require.NoError(t, err)
+
 			assert.Equal(t, test.expected, conf)
 		})
 	}
@@ -3502,7 +3509,9 @@ func TestLoadHTTPRoutes_filterExtensionRef(t *testing.T) {
 					p.RegisterFilterFuncs(group, kind, filterFunc)
 				}
 			}
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			assert.NoError(t, err)
+
 			assert.Equal(t, test.expected, conf)
 		})
 	}
@@ -3579,6 +3588,8 @@ func TestLoadGRPCRoutes(t *testing.T) {
 							RootCAs: []types.FileOrContent{
 								"CA1",
 								"CA2",
+								"CA1-secret",
+								"CA2-secret",
 							},
 						},
 					},
@@ -3682,7 +3693,9 @@ func TestLoadGRPCRoutes(t *testing.T) {
 				client:      client,
 			}
 
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			require.NoError(t, err)
+
 			assert.Equal(t, test.expected, conf)
 		})
 	}
@@ -3974,7 +3987,9 @@ func TestLoadGRPCRoutes_filterExtensionRef(t *testing.T) {
 					p.RegisterFilterFuncs(group, kind, filterFunc)
 				}
 			}
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			assert.NoError(t, err)
+
 			assert.Equal(t, test.expected, conf)
 		})
 	}
@@ -4895,7 +4910,9 @@ func TestLoadTCPRoutes(t *testing.T) {
 				client:              client,
 			}
 
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			require.NoError(t, err)
+
 			assert.Equal(t, test.expected, conf)
 		})
 	}
@@ -6156,6 +6173,178 @@ func TestLoadTLSRoutes(t *testing.T) {
 				TLS: &dynamic.TLSConfiguration{},
 			},
 		},
+		{
+			desc:  "Simple TLSRoute and BackendTLSPolicy with CA certificate",
+			paths: []string{"services.yml", "tlsroute/with_backend_tls_policy.yml"},
+			entryPoints: map[string]Entrypoint{"tls": {
+				Address: ":9001",
+			}},
+			expected: &dynamic.Configuration{
+				UDP: &dynamic.UDPConfiguration{
+					Routers:  map[string]*dynamic.UDPRouter{},
+					Services: map[string]*dynamic.UDPService{},
+				},
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
+						"deny-unknown-host": {
+							Rule:     "HostSNI(`*`) && !ALPN(`h2`) && !ALPN(`http/1.1`)",
+							Priority: 1,
+							Service:  "deny-unknown-host",
+							TLS:      &dynamic.RouterTCPTLSConfig{},
+						},
+						"tlsroute-default-tls-app-1-gw-default-my-gateway-ep-tls-0-e3b0c44298fc1c149afb": {
+							EntryPoints: []string{"tls"},
+							Service:     "tlsroute-default-tls-app-1-gw-default-my-gateway-ep-tls-0-e3b0c44298fc1c149afb-wrr",
+							Rule:        `HostSNI("foo.com")`,
+							Priority:    7,
+							RuleSyntax:  "default",
+							TLS:         &dynamic.RouterTCPTLSConfig{},
+						},
+					},
+					Middlewares: map[string]*dynamic.TCPMiddleware{},
+					Services: map[string]*dynamic.TCPService{
+						"deny-unknown-host": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{},
+						},
+						"tlsroute-default-tls-app-1-gw-default-my-gateway-ep-tls-0-e3b0c44298fc1c149afb-wrr": {
+							Weighted: &dynamic.TCPWeightedRoundRobin{
+								Services: []dynamic.TCPWRRService{
+									{
+										Name:   "default-whoami-80",
+										Weight: ptr.To(1),
+									},
+								},
+							},
+						},
+						"default-whoami-80": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "10.10.0.1:80",
+									},
+									{
+										Address: "10.10.0.2:80",
+									},
+								},
+								ServersTransport: "default-whoami-80",
+							},
+						},
+					},
+					ServersTransports: map[string]*dynamic.TCPServersTransport{
+						"default-whoami-80": {
+							TLS: &dynamic.TLSClientConfig{
+								ServerName: "whoami",
+								RootCAs: []types.FileOrContent{
+									"CA1",
+									"CA2",
+									"CA1-secret",
+									"CA2-secret",
+								},
+							},
+						},
+					},
+				},
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:           map[string]*dynamic.Router{},
+					Middlewares:       map[string]*dynamic.Middleware{},
+					Services:          map[string]*dynamic.Service{},
+					ServersTransports: map[string]*dynamic.ServersTransport{},
+				},
+				TLS: &dynamic.TLSConfiguration{
+					Certificates: []*tls.CertAndStores{
+						{
+							Certificate: tls.Certificate{
+								CertFile: types.FileOrContent(listenerCert),
+								KeyFile:  types.FileOrContent(listenerKey),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc:  "Simple TLSRoute and BackendTLSPolicy with System CA",
+			paths: []string{"services.yml", "tlsroute/with_backend_tls_policy_system.yml"},
+			entryPoints: map[string]Entrypoint{"tls": {
+				Address: ":9001",
+			}},
+			expected: &dynamic.Configuration{
+				UDP: &dynamic.UDPConfiguration{
+					Routers:  map[string]*dynamic.UDPRouter{},
+					Services: map[string]*dynamic.UDPService{},
+				},
+				TCP: &dynamic.TCPConfiguration{
+					Routers: map[string]*dynamic.TCPRouter{
+						"deny-unknown-host": {
+							Rule:     "HostSNI(`*`) && !ALPN(`h2`) && !ALPN(`http/1.1`)",
+							Priority: 1,
+							Service:  "deny-unknown-host",
+							TLS:      &dynamic.RouterTCPTLSConfig{},
+						},
+						"tlsroute-default-tls-app-1-gw-default-my-gateway-ep-tls-0-e3b0c44298fc1c149afb": {
+							EntryPoints: []string{"tls"},
+							Service:     "tlsroute-default-tls-app-1-gw-default-my-gateway-ep-tls-0-e3b0c44298fc1c149afb-wrr",
+							Rule:        `HostSNI("foo.com")`,
+							Priority:    7,
+							RuleSyntax:  "default",
+							TLS:         &dynamic.RouterTCPTLSConfig{},
+						},
+					},
+					Middlewares: map[string]*dynamic.TCPMiddleware{},
+					Services: map[string]*dynamic.TCPService{
+						"deny-unknown-host": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{},
+						},
+						"tlsroute-default-tls-app-1-gw-default-my-gateway-ep-tls-0-e3b0c44298fc1c149afb-wrr": {
+							Weighted: &dynamic.TCPWeightedRoundRobin{
+								Services: []dynamic.TCPWRRService{
+									{
+										Name:   "default-whoami-80",
+										Weight: ptr.To(1),
+									},
+								},
+							},
+						},
+						"default-whoami-80": {
+							LoadBalancer: &dynamic.TCPServersLoadBalancer{
+								Servers: []dynamic.TCPServer{
+									{
+										Address: "10.10.0.1:80",
+									},
+									{
+										Address: "10.10.0.2:80",
+									},
+								},
+								ServersTransport: "default-whoami-80",
+							},
+						},
+					},
+					ServersTransports: map[string]*dynamic.TCPServersTransport{
+						"default-whoami-80": {
+							TLS: &dynamic.TLSClientConfig{
+								ServerName: "whoami",
+							},
+						},
+					},
+				},
+				HTTP: &dynamic.HTTPConfiguration{
+					Routers:           map[string]*dynamic.Router{},
+					Middlewares:       map[string]*dynamic.Middleware{},
+					Services:          map[string]*dynamic.Service{},
+					ServersTransports: map[string]*dynamic.ServersTransport{},
+				},
+				TLS: &dynamic.TLSConfiguration{
+					Certificates: []*tls.CertAndStores{
+						{
+							Certificate: tls.Certificate{
+								CertFile: types.FileOrContent(listenerCert),
+								KeyFile:  types.FileOrContent(listenerKey),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range testCases {
@@ -6189,7 +6378,9 @@ func TestLoadTLSRoutes(t *testing.T) {
 				client:              client,
 			}
 
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			require.NoError(t, err)
+
 			assert.Equal(t, test.expected, conf)
 		})
 	}
@@ -7179,7 +7370,9 @@ func TestLoadMixedRoutes(t *testing.T) {
 				client:              client,
 			}
 
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			require.NoError(t, err)
+
 			assert.Equal(t, test.expected, conf)
 		})
 	}
@@ -7477,7 +7670,9 @@ func TestLoadRoutesWithReferenceGrants(t *testing.T) {
 				client:              client,
 			}
 
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			require.NoError(t, err)
+
 			assert.Equal(t, test.expected, conf)
 		})
 	}
@@ -8605,20 +8800,22 @@ func Test_isCrossProviderNamespaceAllowed(t *testing.T) {
 func TestCrossProviderNamespaces_HTTPRoute(t *testing.T) {
 	testCases := []struct {
 		desc                    string
+		fixture                 string
 		crossProviderNamespaces []string
 		wantError               bool
 	}{
-		{desc: "nil: cross-provider TraefikService backendRefs accepted (backward compatible)", crossProviderNamespaces: nil, wantError: false},
-		{desc: "empty list: cross-provider TraefikService backendRefs are rejected, route dropped", crossProviderNamespaces: []string{}, wantError: true},
-		{desc: "namespace allowed: cross-provider TraefikService backendRefs accepted", crossProviderNamespaces: []string{"default"}, wantError: false},
-		{desc: "namespace not allowed: cross-provider TraefikService backendRefs rejected, route dropped", crossProviderNamespaces: []string{"other"}, wantError: true},
+		{desc: "nil: cross-provider TraefikService backendRefs accepted (backward compatible)", fixture: "httproute/simple_cross_provider.yml", crossProviderNamespaces: nil, wantError: false},
+		{desc: "empty list: cross-provider TraefikService backendRefs are rejected, route dropped", fixture: "httproute/simple_cross_provider.yml", crossProviderNamespaces: []string{}, wantError: true},
+		{desc: "namespace allowed: cross-provider TraefikService backendRefs accepted", fixture: "httproute/simple_cross_provider.yml", crossProviderNamespaces: []string{"default"}, wantError: false},
+		{desc: "namespace not allowed: cross-provider TraefikService backendRefs rejected, route dropped", fixture: "httproute/simple_cross_provider.yml", crossProviderNamespaces: []string{"other"}, wantError: true},
+		{desc: "namespace provided with cross-provider backendRef, route dropped", fixture: "httproute/invalid_cross_provider.yml", crossProviderNamespaces: []string{"other"}, wantError: true},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			k8sObjects, gwObjects := readResources(t, []string{"services.yml", "httproute/simple_cross_provider.yml"})
+			k8sObjects, gwObjects := readResources(t, []string{"services.yml", test.fixture})
 
 			kubeClient := kubefake.NewClientset(k8sObjects...)
 			gwClient := newGatewaySimpleClientSet(t, gwObjects...)
@@ -8639,7 +8836,8 @@ func TestCrossProviderNamespaces_HTTPRoute(t *testing.T) {
 				client:                  client,
 			}
 
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			require.NoError(t, err)
 
 			router, ok := conf.HTTP.Routers["httproute-default-http-app-1-gw-default-my-gateway-ep-web-0-af329269dd38031b03e3"]
 			require.True(t, ok)
@@ -8668,20 +8866,22 @@ func TestCrossProviderNamespaces_HTTPRoute(t *testing.T) {
 func TestCrossProviderNamespaces_TCPRoute(t *testing.T) {
 	testCases := []struct {
 		desc                    string
+		fixture                 string
 		crossProviderNamespaces []string
 		wantError               bool
 	}{
-		{desc: "nil: cross-provider TraefikService backendRefs accepted (backward compatible)", crossProviderNamespaces: nil, wantError: false},
-		{desc: "empty list: cross-provider TraefikService backendRefs are rejected, route dropped", crossProviderNamespaces: []string{}, wantError: true},
-		{desc: "namespace allowed: cross-provider TraefikService backendRefs accepted", crossProviderNamespaces: []string{"default"}, wantError: false},
-		{desc: "namespace not allowed: cross-provider TraefikService backendRefs rejected, route dropped", crossProviderNamespaces: []string{"other"}, wantError: true},
+		{desc: "nil: cross-provider TraefikService backendRefs accepted (backward compatible)", fixture: "tcproute/simple_cross_provider.yml", crossProviderNamespaces: nil, wantError: false},
+		{desc: "empty list: cross-provider TraefikService backendRefs are rejected, route dropped", fixture: "tcproute/simple_cross_provider.yml", crossProviderNamespaces: []string{}, wantError: true},
+		{desc: "namespace allowed: cross-provider TraefikService backendRefs accepted", fixture: "tcproute/simple_cross_provider.yml", crossProviderNamespaces: []string{"default"}, wantError: false},
+		{desc: "namespace not allowed: cross-provider TraefikService backendRefs rejected, route dropped", fixture: "tcproute/simple_cross_provider.yml", crossProviderNamespaces: []string{"other"}, wantError: true},
+		{desc: "namespace provided with cross-provider backendRef, route dropped", fixture: "tcproute/invalid_cross_provider.yml", crossProviderNamespaces: []string{"other"}, wantError: true},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			k8sObjects, gwObjects := readResources(t, []string{"services.yml", "tcproute/simple_cross_provider.yml"})
+			k8sObjects, gwObjects := readResources(t, []string{"services.yml", test.fixture})
 
 			kubeClient := kubefake.NewClientset(k8sObjects...)
 			gwClient := newGatewaySimpleClientSet(t, gwObjects...)
@@ -8704,7 +8904,8 @@ func TestCrossProviderNamespaces_TCPRoute(t *testing.T) {
 				ExperimentalChannel:     true,
 			}
 
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			require.NoError(t, err)
 
 			router, ok := conf.TCP.Routers["tcproute-default-tcp-app-1-gw-default-my-gateway-ep-tcp-0-e3b0c44298fc1c149afb"]
 			require.True(t, ok)
@@ -8740,20 +8941,22 @@ func TestCrossProviderNamespaces_TCPRoute(t *testing.T) {
 func TestCrossProviderNamespaces_TLSRoute(t *testing.T) {
 	testCases := []struct {
 		desc                    string
+		fixture                 string
 		crossProviderNamespaces []string
 		wantError               bool
 	}{
-		{desc: "nil: cross-provider TraefikService backendRefs accepted (backward compatible)", crossProviderNamespaces: nil, wantError: false},
-		{desc: "empty list: cross-provider TraefikService backendRefs are rejected, route dropped", crossProviderNamespaces: []string{}, wantError: true},
-		{desc: "namespace allowed: cross-provider TraefikService backendRefs accepted", crossProviderNamespaces: []string{"default"}, wantError: false},
-		{desc: "namespace not allowed: cross-provider TraefikService backendRefs rejected, route dropped", crossProviderNamespaces: []string{"other"}, wantError: true},
+		{desc: "nil: cross-provider TraefikService backendRefs accepted (backward compatible)", fixture: "tlsroute/simple_cross_provider.yml", crossProviderNamespaces: nil, wantError: false},
+		{desc: "empty list: cross-provider TraefikService backendRefs are rejected, route dropped", fixture: "tlsroute/simple_cross_provider.yml", crossProviderNamespaces: []string{}, wantError: true},
+		{desc: "namespace allowed: cross-provider TraefikService backendRefs accepted", fixture: "tlsroute/simple_cross_provider.yml", crossProviderNamespaces: []string{"default"}, wantError: false},
+		{desc: "namespace not allowed: cross-provider TraefikService backendRefs rejected, route dropped", fixture: "tlsroute/simple_cross_provider.yml", crossProviderNamespaces: []string{"other"}, wantError: true},
+		{desc: "namespace provided with cross-provider backendRef, route dropped", fixture: "tlsroute/invalid_cross_provider.yml", crossProviderNamespaces: []string{"other"}, wantError: true},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.desc, func(t *testing.T) {
 			t.Parallel()
 
-			k8sObjects, gwObjects := readResources(t, []string{"services.yml", "tlsroute/simple_cross_provider.yml"})
+			k8sObjects, gwObjects := readResources(t, []string{"services.yml", test.fixture})
 
 			kubeClient := kubefake.NewClientset(k8sObjects...)
 			gwClient := newGatewaySimpleClientSet(t, gwObjects...)
@@ -8775,7 +8978,8 @@ func TestCrossProviderNamespaces_TLSRoute(t *testing.T) {
 				client:                  client,
 			}
 
-			conf := p.loadConfigurationFromGateways(t.Context())
+			conf, _, err := p.loadConfigurationFromGateways(t.Context())
+			assert.NoError(t, err)
 
 			fmt.Println(conf.TCP.Routers)
 
