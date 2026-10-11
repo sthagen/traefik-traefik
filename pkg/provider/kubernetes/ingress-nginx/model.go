@@ -182,6 +182,9 @@ type location struct {
 	// AppRoot, if non-nil, configures the path to redirect bare "/" requests to.
 	AppRoot *dynamic.AppRoot
 
+	// AppRootExtraRouterRule, when non-empty, is the rule for app-root's extra "/" router.
+	AppRootExtraRouterRule string
+
 	// UpstreamVhost, if non-nil, overrides the Host header forwarded to the backend.
 	UpstreamVhost *dynamic.UpstreamVHost
 
@@ -215,6 +218,11 @@ type location struct {
 	// LimitConnections, if non-nil, caps concurrent in-flight requests per source IP.
 	LimitConnections *dynamic.InFlightReq
 
+	// LimitAllowlist holds the client IP ranges exempted from the rate and connection
+	// limits above. In nginx those limits share a single counting key, and the allowlist
+	// empties it, so an allowlisted client is exempted from all of them at once.
+	LimitAllowlist []string
+
 	// AuthTLSPassCert, if non-nil, forwards the client TLS certificate to the backend.
 	AuthTLSPassCert *dynamic.AuthTLSPassCertificateToUpstream
 
@@ -231,6 +239,11 @@ type location struct {
 	// ingress-level spec.defaultBackend fallback (host-only rule, no path,
 	// no serversTransport).
 	IsIngressDefaultBackend bool
+}
+
+// hasLimits returns true when the location carries at least one rate or connection limit.
+func (l *location) hasLimits() bool {
+	return l.RateLimitRPM != nil || l.RateLimitRPS != nil || l.LimitConnections != nil
 }
 
 // middlewareCustomHTTPErrors configures error-page routing for specific HTTP status codes.
